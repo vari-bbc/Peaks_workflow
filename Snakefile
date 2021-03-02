@@ -397,8 +397,40 @@ rule macs2:
         
         """
 
-# remove blacklist regions from macs2 peaks using overlap of 1bp or more
+
+def get_peaks_for_merging (wildcards):
+    if wildcards.peak_type == "macs2_narrow":
+        return(expand("analysis/macs2/{sample}_macs2_narrow_peaks.narrowPeak", sample=samples['sample'].values))
+    if wildcards.peak_type == "macs2_broad":
+        return(expand("analysis/macs2/{sample}_macs2_broad_peaks.broadPeak", sample=samples['sample'].values))
+
+
+rule merge_all_peaks:
+    input:
+        get_peaks_for_merging
+    output:
+        "analysis/merge_all_peaks/all_merged_{peak_type}.bed",
+    log:
+        stdout="logs/merge_all_peaks/{peak_type}.o",
+        stderr="logs/merge_all_peaks/{peak_type}.e"
+    benchmark:
+        "benchmarks/merge_all_peaks/{peak_type}.txt"
+    params:
+    envmodules:
+        "bbc/bedops/bedops-2.4.37"
+    threads: 4
+    resources:
+        mem_gb=100
+    shell:
+        """
+        bedops --merge {input} 1> {output} 2> {log.stderr}
+        """
+
+
 rule rm_blacklist_peaks:
+    """
+    Remove blacklist regions from macs2 peaks using overlap of 1bp or more
+    """
     input:
         broad="analysis/macs2/{sample}_macs2_broad_peaks.broadPeak",
         narrow="analysis/macs2/{sample}_macs2_narrow_peaks.narrowPeak"
@@ -413,7 +445,6 @@ rule rm_blacklist_peaks:
     params:
         blacklist=blacklist,
     envmodules:
-        "bbc/samtools/samtools-1.9",
         "bbc/bedtools/bedtools-2.29.2"
     threads: 4
     resources:
@@ -441,7 +472,8 @@ rule rm_blacklist_peaks:
 rule deeptools_plotenrichment:
     input:
         bam="analysis/filt_bams/{sample}_filt_alns.bam",
-        bed=expand("analysis/macs2/{{sample}}_macs2_{type}_peaks.{type}Peak", type=['narrow','broad']),#get_peaks_for_frip
+        bed=[expand("analysis/macs2/{{sample}}_macs2_{type}_peaks.{type}Peak", type=['narrow','broad']),
+        expand("analysis/merge_all_peaks/all_merged_{peak_type}.bed", peak_type=['macs2_narrow','macs2_broad'])],
     output:
         #merged_peaks="analysis/deeptools_plotenrichment/{sample}.narrowPeak",
         plot="analysis/deeptools_plotenrichment/{sample}.pdf",
