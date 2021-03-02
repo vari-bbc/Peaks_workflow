@@ -5,4 +5,5 @@ analysis/
 benchmarks/
 deliverables/
 logs/
-raw_data/
+raw_data/*
+!raw_data/.keep
