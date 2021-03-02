@@ -23,7 +23,7 @@ blacklist = config['ref']['blacklist']
 mito_chrom=config['ref']['mito_chr']
 fai_parsed = pd.read_table(ref_fai, names=['chr','len','offset','bases_per_line','bytes_per_line'])
 #chroms_no_mito = ' '.join(fai_parsed[fai_parsed['chr'] != mito_chrom]['chr'].values)
-chroms_gt_1Mb = ' '.join(fai_parsed[fai_parsed['len'] > 1000000]['chr'].values)
+chroms_gt_5Mb = ' '.join(fai_parsed[fai_parsed['len'] > 5000000]['chr'].values)
 
 ##### load config and sample sheets #####
 
@@ -228,7 +228,7 @@ rule filt_bams:
     params:
         mapq=20,
         flags_to_exclude="2308",
-        keep_chroms = chroms_gt_1Mb #chroms_no_mito if atacseq else ''
+        keep_chroms = chroms_gt_5Mb #chroms_no_mito if atacseq else ''
     threads: 8
     resources:
         mem_gb=80
