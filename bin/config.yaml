@@ -16,7 +16,7 @@ ref:
 
   #atacseq: true
 
-peakset_for_FRiP: 'broad'
+  #peakset_for_FRiP: 'narrow'
 
 macs2:
   gsize: "mm"

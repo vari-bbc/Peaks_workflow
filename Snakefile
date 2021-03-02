@@ -25,10 +25,6 @@ fai_parsed = pd.read_table(ref_fai, names=['chr','len','offset','bases_per_line'
 #chroms_no_mito = ' '.join(fai_parsed[fai_parsed['chr'] != mito_chrom]['chr'].values)
 chroms_gt_1Mb = ' '.join(fai_parsed[fai_parsed['len'] > 1000000]['chr'].values)
 
-#atacseq = config['atacseq']
-
-frip_peakset = config['peakset_for_FRiP']
-
 ##### load config and sample sheets #####
 
 samples = pd.read_table("bin/samples.tsv")
@@ -436,16 +432,16 @@ rule rm_blacklist_peaks:
 
         """
 
-def get_peaks_for_frip (wildcards):
-    if frip_peakset=="narrow":
-        return("analysis/macs2/{sample}_macs2_narrow_peaks.narrowPeak")
-    elif frip_peakset=="broad":
-        return("analysis/macs2/{sample}_macs2_broad_peaks.broadPeak")
+#def get_peaks_for_frip (wildcards):
+#    if frip_peakset=="narrow":
+#        return("analysis/macs2/{sample}_macs2_narrow_peaks.narrowPeak")
+#    elif frip_peakset=="broad":
+#        return("analysis/macs2/{sample}_macs2_broad_peaks.broadPeak")
 
 rule deeptools_plotenrichment:
     input:
         bam="analysis/filt_bams/{sample}_filt_alns.bam",
-        bed=get_peaks_for_frip
+        bed=expand("analysis/macs2/{{sample}}_macs2_{type}_peaks.{type}Peak", type=['narrow','broad']),#get_peaks_for_frip
     output:
         #merged_peaks="analysis/deeptools_plotenrichment/{sample}.narrowPeak",
         plot="analysis/deeptools_plotenrichment/{sample}.pdf",
