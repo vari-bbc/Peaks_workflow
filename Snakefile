@@ -328,10 +328,20 @@ rule deeptools_fingerprint:
 
         """
 
+def get_macs2_bams(wildcards):
+    macs2_bams = { 'trt': "analysis/filt_bams/{sample}_filt_alns.bam".format(sample=wildcards.sample) }
+    
+    control = samples[samples['sample'] == wildcards.sample]['control'].values[0]
+    
+    if (not pd.isnull(control)):
+        macs2_bams['control'] = "analysis/filt_bams/{sample}_filt_alns.bam".format(sample=control)
+    return macs2_bams
+
 rule macs2:
     input:
-        trt="analysis/filt_bams/{sample}_filt_alns.bam",
-        #control=lambda wildcards: expand("analysis/filt_bams/{contr_sample}_filt_alns.bam", contr_sample=samples[samples["sample"]==wildcards.sample]['input'].values[0].split(',')),
+        unpack(get_macs2_bams)
+        #trt="analysis/filt_bams/{sample}_filt_alns.bam",
+        #control=get_macs2_control,
     output:
         multiext("analysis/macs2/{sample}_macs2_broad_peaks", ".xls", ".broadPeak"),
         multiext("analysis/macs2/{sample}_macs2_narrow_peaks", ".xls", ".narrowPeak"),
@@ -342,6 +352,9 @@ rule macs2:
     benchmark:
         "benchmarks/macs2/{sample}.txt"
     params:
+        control_param=lambda wildcards, input: "-c "+input.control if len(input) > 1 else '',
+        #lambda wildcards, input: print(len(input))
+            #"-c {input.control}" if input.has_key('control') else '',
         species=macs2_species,
         q_cutoff="0.05",
         broad_name="{sample}_macs2_broad",
@@ -358,6 +371,7 @@ rule macs2:
         macs2 \
         callpeak \
         -t {input.trt} \
+        {params.control_param} \
         -f BAMPE \
         --outdir {params.outdir} \
         -n {params.broad_name} \
@@ -373,6 +387,7 @@ rule macs2:
         macs2 \
         callpeak \
         -t {input.trt} \
+        {params.control_param} \
         -f BAMPE \
         --outdir {params.outdir} \
         -n {params.narrow_name} \
