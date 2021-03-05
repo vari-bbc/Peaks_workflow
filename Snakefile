@@ -50,6 +50,7 @@ rule all:
         "analysis/deeptools_fingerprint/fingerprint.rawcts",
         expand("analysis/peaks_rm_blacklist/{sample}_macs2_{size}_peaks.rm_blacklist.{size}Peak", sample=samples["sample"], size=["narrow","broad"]),
         expand("analysis/deeptools_plotenrichment/{sample}.pdf", sample=samples["sample"]),
+        "analysis/peaks_venn/report.html",
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -258,6 +259,7 @@ rule deeptools_cov_keepdups:
     benchmark:
         "benchmarks/deeptools_cov_keepdups/{sample}.txt"
     params:
+        blacklist=blacklist,
         binsize=bamCoverage_binsize,
         norm_method="CPM",
         sam_keep="64",
@@ -279,6 +281,7 @@ rule deeptools_cov_keepdups:
         --binSize {params.binsize} \
         --bam {input.bam} \
         --extendReads \
+        --blackListFileName {params.blacklist} \
         -o {output.bigwig_keepdups} \
         --binSize {params.binsize} \
         --normalizeUsing {params.norm_method} \
@@ -468,6 +471,36 @@ rule rm_blacklist_peaks:
 #        return("analysis/macs2/{sample}_macs2_narrow_peaks.narrowPeak")
 #    elif frip_peakset=="broad":
 #        return("analysis/macs2/{sample}_macs2_broad_peaks.broadPeak")
+rule peaks_venn:
+    """
+    Make Venn diagrams for peaks.
+    """
+    input:
+        broad=expand("analysis/peaks_rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak", sample=samples['sample'].values),
+        narrow=expand("analysis/peaks_rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples['sample'].values),
+    output:
+        "analysis/peaks_venn/report.html"
+    log:
+        stdout="logs/peaks_venn/out.o",
+        stderr="logs/peaks_venn/err.e"
+    benchmark:
+        "benchmarks/peaks_venn/benchmark.txt"
+    params:
+        out_dir="analysis/peaks_venn/peaks_venn_out_files/",
+        sample_names=samples['sample'].values,
+    envmodules:
+        "bbc/R/R-4.0.2",
+        "bbc/pandoc/pandoc-2.7.3",
+        #"bbc/cairo/cairo-1.15.12",
+        "bbc/curl/curl-7.65.1",
+        "bbc/texlive/texlive-20190625",
+        "bbc/pcre2/pcre2-10.34",
+    threads: 1
+    resources:
+        mem_gb = 60
+    script:
+        "bin/peaks_venn.Rmd"
+
 
 rule deeptools_plotenrichment:
     input:

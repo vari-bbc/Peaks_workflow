@@ -1,0 +1,89 @@
+---
+title: "Peaks Venn"
+author: "Kin Lau"
+date: '`r format(Sys.Date(), "%B %d, %Y")`'
+output:
+  html_document: default
+---
+
+```{r starttime}
+.libPaths("/primary/vari/software/BBC/R_libraries/R-4.0.0-pcre2-setR_LIBS_USER")
+
+# save start time for script
+start_tm <- Sys.time()
+start_tm
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo=TRUE, warning=TRUE, message=TRUE, cache=FALSE, fig.width=8, fig.height=8)
+
+```
+
+```{r make_outdir}
+outdir <- snakemake@params[["out_dir"]]
+
+dir.create(outdir, recursive=TRUE)
+```
+
+# Packages loaded
+
+```{r loadlibs, echo=TRUE, warning=TRUE, message=TRUE, cache=FALSE}
+library(dplyr)
+library(stringr)
+library(rtracklayer)
+library(ChIPseeker)
+```
+
+# Read in peaks
+
+```{r read_peaks}
+# a list containing vectors as elements, where each vector is a different group of peak files.
+peak_files <- snakemake@input
+
+# extract only the named elements
+peak_files <- peak_files[grep("^$", names(peak_files), value = TRUE, invert = TRUE)]
+
+sample_names <- snakemake@params[["sample_names"]]
+
+#save.image(file=paste0(outdir, "/Snakemake_vars.Rimage"))
+
+peaks <- lapply(rlang::set_names(names(peak_files), names(peak_files)), function(peak_group_name){
+    peak_group <- peak_files[[peak_group_name]]
+    stopifnot(length(sample_names) == length(peak_group))
+    lapply(rlang::set_names(peak_group, paste0(sample_names, "_", peak_group_name)), 
+            function(peak_file){
+                rtracklayer::import(peak_file)
+            })
+})
+
+```
+
+# Make Venns
+
+```{r venn}
+
+for (i in 1:length(peaks)){
+    pdf(paste0(outdir, "/", names(peaks)[i], "_venn.pdf"))
+    # 9 is maximum # of sets for vennerable
+    ChIPseeker::vennplot(peaks[[i]][1:min(c(length(peaks[[i]]), 9))])
+    dev.off()
+}
+
+```
+
+# SessionInfo
+
+```{r sessioninfo}
+sessionInfo()
+```
+
+# Time
+
+```{r endtime}
+# output time taken to run script
+end_tm <- Sys.time()
+end_tm
+end_tm - start_tm
+
+```
+
