@@ -29,6 +29,9 @@ chroms_gt_5Mb = ' '.join(fai_parsed[fai_parsed['len'] > 5000000]['chr'].values)
 
 samples = pd.read_table("bin/samples.tsv")
 
+# Filter for sample rows that are not controls
+samples_no_controls = samples[-samples['sample'].isin(samples['control'].values)]
+
 snakemake_dir = os.getcwd() + "/"
 
 # make a tmp directory for analyses
@@ -476,8 +479,8 @@ rule peaks_venn:
     Make Venn diagrams for peaks.
     """
     input:
-        broad=expand("analysis/peaks_rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak", sample=samples['sample'].values),
-        narrow=expand("analysis/peaks_rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples['sample'].values),
+        broad=expand("analysis/peaks_rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak", sample=samples_no_controls['sample'].values),
+        narrow=expand("analysis/peaks_rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples_no_controls['sample'].values),
     output:
         "analysis/peaks_venn/report.html"
     log:
@@ -487,7 +490,7 @@ rule peaks_venn:
         "benchmarks/peaks_venn/benchmark.txt"
     params:
         out_dir="analysis/peaks_venn/peaks_venn_out_files/",
-        sample_names=samples['sample'].values,
+        sample_names=samples_no_controls['sample'].values,
     envmodules:
         "bbc/R/R-4.0.2",
         "bbc/pandoc/pandoc-2.7.3",
