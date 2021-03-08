@@ -492,18 +492,12 @@ rule peaks_venn:
         out_dir="analysis/peaks_venn/peaks_venn_out_files/",
         sample_names=samples_no_controls['sample'].values,
     envmodules:
-        "bbc/R/R-4.0.2",
-        "bbc/pandoc/pandoc-2.7.3",
-        #"bbc/cairo/cairo-1.15.12",
-        "bbc/curl/curl-7.65.1",
-        "bbc/texlive/texlive-20190625",
-        "bbc/pcre2/pcre2-10.34",
+        "bbc/R/R-4.0.2-setR_LIBS_USER"
     threads: 1
     resources:
         mem_gb = 60
     script:
         "bin/peaks_venn.Rmd"
-
 
 rule deeptools_plotenrichment:
     input:
