@@ -8,7 +8,6 @@ output:
 
 ```{r starttime}
 .libPaths("/primary/vari/software/BBC/R_libraries/R-4.0.0-pcre2-setR_LIBS_USER")
-
 # save start time for script
 start_tm <- Sys.time()
 start_tm
@@ -16,12 +15,10 @@ start_tm
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo=TRUE, warning=TRUE, message=TRUE, cache=FALSE, fig.width=8, fig.height=8)
-
 ```
 
 ```{r make_outdir}
 outdir <- snakemake@params[["out_dir"]]
-
 dir.create(outdir, recursive=TRUE)
 ```
 
@@ -31,7 +28,10 @@ dir.create(outdir, recursive=TRUE)
 library(dplyr)
 library(stringr)
 library(rtracklayer)
-library(ChIPseeker)
+#library(ChIPseeker)
+library(ChIPpeakAnno)
+library(viridis)
+library(rtracklayer)
 ```
 
 # Read in peaks
@@ -39,28 +39,23 @@ library(ChIPseeker)
 ```{r read_peaks}
 # a list containing vectors as elements, where each vector is a different group of peak files.
 peak_files <- snakemake@input
-
 # extract only the named elements
 peak_files <- peak_files[grep("^$", names(peak_files), value = TRUE, invert = TRUE)]
-
 sample_names <- snakemake@params[["sample_names"]]
-
 #save.image(file=paste0(outdir, "/Snakemake_vars.Rimage"))
-
 peaks <- lapply(rlang::set_names(names(peak_files), names(peak_files)), function(peak_group_name){
     peak_group <- peak_files[[peak_group_name]]
     stopifnot(length(sample_names) == length(peak_group))
-    lapply(rlang::set_names(peak_group, paste0(sample_names, "_", peak_group_name)), 
+    lapply(rlang::set_names(peak_group, sample_names), 
             function(peak_file){
                 rtracklayer::import(peak_file)
             })
 })
-
 ```
 
-# Make Venns
+```{r venn, eval=FALSE}
 
-```{r venn}
+# ChipSeeker venn produces different counts than Homer mergePeaks, ChipPeakAnno makeVennDiagram and my own manual checks with R findOverlaps (those were consistent with each other). ChipSeeker appears to be using a different definition of overlap than the defaults in the above methods. Unfortunately, ChipSeeker documentation is unclear as to how it determines overlaps and does not seem to use typical GenomicRanges findOverlaps etc fucntions like ChipPeakAnno does.
 
 for (i in 1:length(peaks)){
     pdf(paste0(outdir, "/", names(peaks)[i], "_venn.pdf"))
@@ -68,7 +63,30 @@ for (i in 1:length(peaks)){
     ChIPseeker::vennplot(peaks[[i]][1:min(c(length(peaks[[i]]), 9))])
     dev.off()
 }
+```
 
+# Make Venns using ChipPeakAnno
+
+```{r venn_chippeakanno}
+for (i in 1:length(peaks)){
+    pdf(paste0(outdir, "/", names(peaks)[i], "_vennChipPeakAnno.pdf"))
+    # 5 is maximum # of sets for VennDiagram
+    # setting connectedPeaks="merge" seems to mimic the Homer approach in mergePeaks
+    num_venn <- min(c(length(peaks[[i]]), 5))
+    makeVennDiagram(peaks[[i]][1:num_venn], connectedPeaks="merge", fill=viridis_pal()(num_venn),
+                    fontfamily="sans", cex=1.5, cat.fontfamily="sans", cat.cex=1.5)
+    dev.off()
+
+    y <- findOverlapsOfPeaks(peaks[[i]][1:num_venn], connectedPeaks="merge")
+    peaklist <- y$peaklist
+    names(peaklist) <- make.names(names(peaklist))
+    for (j in 1:length(peaklist)){
+        rtracklayer::export(peaklist[[j]], paste0(outdir, "/", names(peaklist)[j], "_", names(peaks)[i], ".bed"))
+    }
+
+}
+
+#saveRDS(y, "analysis/peaks_venn/findOverlapsOfPeaks.RDS")
 ```
 
 # SessionInfo
@@ -84,6 +102,4 @@ sessionInfo()
 end_tm <- Sys.time()
 end_tm
 end_tm - start_tm
-
 ```
-
