@@ -476,7 +476,7 @@ rule rm_blacklist_peaks:
 #        return("analysis/macs2/{sample}_macs2_broad_peaks.broadPeak")
 rule peaks_venn:
     """
-    Make Venn diagrams for peaks.
+    Make Venn diagrams for peaksets of each peak type. Note that only first 5 samples are plotted.
     """
     input:
         broad=expand("analysis/peaks_rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak", sample=samples_no_controls['sample'].values),
