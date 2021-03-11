@@ -1,26 +1,26 @@
 # path or URL to sample sheet (TSV format, columns: sample, condition, ...)
 ref:
   # path/to/reference/gDNA.fasta
-  sequence:       /secondary/projects/bbc/research/prep_bbc_shared/data/mm10_gencode/sequence/mm10_gencode.fa
-  fai:            /secondary/projects/bbc/research/prep_bbc_shared/data/mm10_gencode/sequence/mm10_gencode.fa.fai
+  sequence:       /secondary/projects/bbc/research/prep_bbc_shared_timestamped/20210310-12.51.51/data/mm10_gencode/sequence/mm10_gencode.fa
+  fai:            /secondary/projects/bbc/research/prep_bbc_shared_timestamped/20210310-12.51.51/data/mm10_gencode/sequence/mm10_gencode.fa.fai
   # path/to/bwa/index/directory
-  index:          /secondary/projects/bbc/research/prep_bbc_shared/data/mm10_gencode/indexes/bwa/mm10_gencode
+  index:          /secondary/projects/bbc/research/prep_bbc_shared_timestamped/20210310-12.51.51/data/mm10_gencode/indexes/bwa/mm10_gencode
   # path/to/gtf/file/with/transcripts.gtf
-  annotation:     /secondary/projects/bbc/research/prep_bbc_shared/data/mm10_gencode/annotation/mm10_gencode.gtf
+  annotation:     /secondary/projects/bbc/research/prep_bbc_shared_timestamped/20210310-12.51.51/data/mm10_gencode/annotation/mm10_gencode.gtf
   # ENCODE blacklist
-  blacklist:      /secondary/projects/bbc/research/prep_bbc_shared/data/mm10_gencode/blacklist/mm10_encode_v2.bed
+  blacklist:      /secondary/projects/bbc/research/prep_bbc_shared_timestamped/20210310-12.51.51/data/mm10_gencode/blacklist/mm10_encode_v2.bed
   # space-delimited chroms to keep.
   # REMEMBER TO CHECK THAT THESE ARE ACCURATE FOR THE TARGET SPECIES
   #keep_chroms:    chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chrX chrY
   mito_chr: chrM
 
-  #atacseq: true
+atacseq: true
 
   #peakset_for_FRiP: 'narrow'
 
 macs2:
   gsize: "mm"
 
-gtf_for_tss_heatmap: /secondary/projects/bbc/research/prep_bbc_shared/data/mm10_gencode/annotation/mm10_gencode.basic.gtf
+gtf_for_tss_heatmap: /secondary/projects/bbc/research/prep_bbc_shared_timestamped/20210310-12.51.51/data/mm10_gencode/annotation/mm10_gencode.basic.gtf
 
 shared_snakemake_repo: "/secondary/projects/bbc/research/shared_snakemake/"
