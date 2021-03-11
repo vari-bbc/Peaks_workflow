@@ -776,6 +776,7 @@ rule multiqc:
     shell:
         """
         multiqc \
+        --force \
         --outdir {params.workdir} \
         --filename {params.outfile} \
         {params.dirs}
