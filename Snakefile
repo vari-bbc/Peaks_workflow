@@ -52,6 +52,7 @@ rule all:
         "analysis/multiqc/multiqc_report.html",
         "analysis/deeptools_fingerprint/fingerprint.rawcts",
         expand("analysis/peaks_rm_blacklist/{sample}_macs2_{size}_peaks.rm_blacklist.{size}Peak", sample=samples["sample"], size=["narrow","broad"]),
+        expand("analysis/hmmratac/{sample}_summits.bed", sample=samples["sample"]) if config['atacseq'] else [],
         expand("analysis/deeptools_plotenrichment/{sample}.pdf", sample=samples["sample"]),
         "analysis/peaks_venn/report.html",
 
@@ -403,6 +404,58 @@ rule macs2:
         
         """
 
+rule hmmratac:
+    """
+    Run HMMRATAC for peak calling.
+    """
+    input:
+        "analysis/filt_bams/{sample}_filt_alns.bam",
+    output:
+        log="analysis/hmmratac/{sample}.log",
+        genomeinfo="analysis/hmmratac/{sample}.genomeinfo",
+        gappedpeak="analysis/hmmratac/{sample}_peaks.gappedPeak",
+        gappedpeak_filt="analysis/hmmratac/{sample}_peaks.filteredPeaks.gappedPeak",
+        gappedpeak_filt_open="analysis/hmmratac/{sample}_peaks.filteredPeaks.openOnly.bed",
+        summits="analysis/hmmratac/{sample}_summits.bed",
+        summits_filt="analysis/hmmratac/{sample}.filteredSummits.bed"
+    log:
+        stdout="logs/hmmratac/{sample}.o",
+        stderr="logs/hmmratac/{sample}.e"
+    benchmark:
+        "benchmarks/hmmratac/{sample}.txt"
+    envmodules:
+        "bbc/HMMRATAC/HMMRATAC-1.2.10",
+        "bbc/samtools/samtools-1.9"
+    params:
+        outpref="analysis/hmmratac/{sample}",
+        temp_dir="analysis/hmmratac/{sample}.tmp/",
+        blacklist=config["ref"]["blacklist"],
+        mito_chr=config["ref"]["mito_chr"]
+    resources:
+        mem_gb=120
+    threads: 8
+    shell:
+        """
+        # modified from https://github.com/LiuLabUB/HMMRATAC/blob/master/HMMRATAC_Guide.md
+        # we remove the mitochondrial genome from the genominfo file in order to prevent it from being processed by HMMRATAC (see https://github.com/LiuLabUB/HMMRATAC/issues/50)
+        samtools view -H {input} | perl -ne 'if(/^@SQ.*?SN:(\w+)\s+LN:(\d+)/){{print $1,"\\t",$2,"\\n"}}' | grep -Pv "^{params.mito_chr}\\t" > {output.genomeinfo}
+
+        java -Xms80g -Xmx{resources.mem_gb}g -Djava.io.tmpdir={params.temp_dir} -jar $HMMRATAC \
+        --output {params.outpref} \
+        -b {input} \
+        -i {input}.bai \
+        -g {output.genomeinfo} \
+        --blacklist {params.blacklist}
+
+        # copied from https://github.com/LiuLabUB/HMMRATAC/blob/master/HMMRATAC_Guide.md
+        awk -v OFS="\\t" '$13>=10 {{print}}' {params.outpref}_peaks.gappedPeak > {output.gappedpeak_filt}
+
+        # custom one-liner to get only the open regions
+        perl -lane 'print "$F[0]\\t$F[6]\\t$F[7]\\t$F[3]\\t$F[12]"' {output.gappedpeak_filt} > {output.gappedpeak_filt_open}
+
+        # copied from https://github.com/LiuLabUB/HMMRATAC/blob/master/HMMRATAC_Guide.md
+        awk -v OFS="\\t" '$5>=10 {{print}}' {params.outpref}_summits.bed > {output.summits_filt}
+        """
 
 def get_peaks_for_merging (wildcards):
     if wildcards.peak_type == "macs2_narrow":
