@@ -274,7 +274,8 @@ rule filt_bams_nfr:
         maxFragmentSize = 150,
     threads: 8
     envmodules:
-        "bbc/deeptools/deeptools-3.4.3"
+        "bbc/deeptools/deeptools-3.4.3",
+        "bbc/samtools/samtools-1.9"
     resources:
         mem_gb=80
     shell:
@@ -412,7 +413,7 @@ rule macs2:
         q_cutoff="0.05",
         broad_name="{sample}_macs2_broad",
         narrow_name="{sample}_macs2_narrow",
-        outdir="analysis/macs2/",
+        outdir="analysis/{macs2_type}/",
         temp_dir="tmp/"
     envmodules:
         "bbc/macs2/macs2-2.2.7.1"
