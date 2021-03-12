@@ -270,7 +270,7 @@ rule filt_bams_nfr:
     benchmark:
         "benchmarks/filt_bams_nfr/{sample}.txt"
     params:
-        temp=os.path.join(snakemake_dir, "analysis/deeptools_cov_keepdups/{sample}_tmp"),
+        temp=os.path.join(snakemake_dir, "tmp"),
         maxFragmentSize = 150,
     threads: 8
     envmodules:
@@ -281,7 +281,6 @@ rule filt_bams_nfr:
     shell:
         """
         export TMPDIR={params.temp}
-        [[ -d $TMPDIR ]] || mkdir -p $TMPDIR
         
         alignmentSieve --bam {input} \
         --outFile {output.bam} \
@@ -290,8 +289,6 @@ rule filt_bams_nfr:
         --maxFragmentLength {params.maxFragmentSize} \
         2> {log.stderr} 
         
-        rm -fr $TMPDIR
-
         samtools index {output.bam}
         samtools idxstats {output.bam} > {output.idxstat}
 
@@ -313,7 +310,7 @@ rule deeptools_cov_keepdups:
         binsize=bamCoverage_binsize,
         norm_method="CPM",
         sam_keep="64",
-        temp=os.path.join(snakemake_dir, "analysis/deeptools_cov_keepdups/{sample}_tmp")
+        temp=os.path.join(snakemake_dir, "tmp")
     threads: 16
     envmodules:
         "bbc/deeptools/deeptools-3.4.3"
@@ -322,7 +319,6 @@ rule deeptools_cov_keepdups:
     shell:
         """
         export TMPDIR={params.temp}
-        [[ -d $TMPDIR ]] || mkdir -p $TMPDIR
         
         # calculate the coverage
         ## Since this is PE data, we can use '--extendReads' to extend the reads to connect the two mates.
@@ -336,8 +332,6 @@ rule deeptools_cov_keepdups:
         --binSize {params.binsize} \
         --normalizeUsing {params.norm_method} \
         --samFlagInclude {params.sam_keep}
-
-        rm -fr $TMPDIR
 
         """
 
