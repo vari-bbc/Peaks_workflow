@@ -451,7 +451,7 @@ rule hmmratac:
         awk -v OFS="\\t" '$13>=10 {{print}}' {params.outpref}_peaks.gappedPeak > {output.gappedpeak_filt}
 
         # custom one-liner to get only the open regions
-        perl -lane 'print "$F[0]\\t$F[6]\\t$F[7]\\t$F[3]\\t$F[12]"' {output.gappedpeak_filt} > {output.gappedpeak_filt_open}
+        perl -F"\t" -lane 'print "$F[0]\\t$F[6]\\t$F[7]\\t$F[3]\\t$F[12]"' {output.gappedpeak_filt} > {output.gappedpeak_filt_open}
 
         # copied from https://github.com/LiuLabUB/HMMRATAC/blob/master/HMMRATAC_Guide.md
         awk -v OFS="\\t" '$5>=10 {{print}}' {params.outpref}_summits.bed > {output.summits_filt}
