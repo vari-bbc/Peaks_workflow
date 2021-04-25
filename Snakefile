@@ -23,7 +23,10 @@ blacklist = config['ref']['blacklist']
 mito_chrom=config['ref']['mito_chr']
 fai_parsed = pd.read_table(ref_fai, names=['chr','len','offset','bases_per_line','bytes_per_line'])
 #chroms_no_mito = ' '.join(fai_parsed[fai_parsed['chr'] != mito_chrom]['chr'].values)
-chroms_gt_5Mb = ' '.join(fai_parsed[fai_parsed['len'] > 5000000]['chr'].values)
+
+# When we filter alignments for peak calling, we remove contigs smaller than 'cutoff'. This is meant to be a way to retain only the nuclear chromosomes (not mitochondrial).
+chrom_min_bp = config['ref']['chrom_min_bp']
+chroms_gt_cutoff = ' '.join(fai_parsed[fai_parsed['len'] > chrom_min_bp]['chr'].values)
 
 ##### load config and sample sheets #####
 
@@ -47,13 +50,14 @@ include: os.path.join(shared_snakemake_dir, "post_alignment/CollectAlignmentSumm
 
 rule all:
     input:
-        expand("analysis/filt_bams/{sample.sample}_filt_alns.bam", sample=samples.itertuples()),
+        #expand("analysis/filt_bams/{sample.sample}_filt_alns.bam", sample=samples.itertuples()),
         expand("analysis/deeptools_cov_keepdups/{sample.sample}_filt_alns_keepdups.bw", sample=samples.itertuples()),
         "analysis/multiqc/multiqc_report.html",
         "analysis/deeptools_fingerprint/fingerprint.rawcts",
-        expand("analysis/peaks_rm_blacklist/{sample}_macs2_{size}_peaks.rm_blacklist.{size}Peak", sample=samples["sample"], size=["narrow","broad"]),
-        expand("analysis/hmmratac/{sample}_summits.bed", sample=samples["sample"]) if config['atacseq'] else [],
+        #expand("analysis/peaks_rm_blacklist/{sample}_macs2_{size}_peaks.rm_blacklist.{size}Peak", sample=samples["sample"], size=["narrow","broad"]),
+        #expand("analysis/hmmratac/{sample}_summits.bed", sample=samples["sample"]) if config['atacseq'] else [],
         expand("analysis/deeptools_plotenrichment/{sample}.pdf", sample=samples["sample"]),
+        expand("analysis/filt_bams_nfr/CollectInsertSizeMetrics/{sample.sample}_filt_alns_nfr.insert_size_metrics.txt", sample=samples.itertuples()) if config['atacseq'] else [],
         "analysis/peaks_venn/report.html",
 
 def get_orig_fastq(wildcards):
@@ -195,7 +199,7 @@ rule bwamem:
         -t {threads} \
         {params.bwa_idx} \
         {input} | \
-        samblaster | \
+        samblaster --addMateTags | \
         samtools sort \
         -m 6G \
         -@ {threads} \
@@ -233,7 +237,7 @@ rule filt_bams:
     params:
         mapq=20,
         flags_to_exclude="2308",
-        keep_chroms = chroms_gt_5Mb #chroms_no_mito if atacseq else ''
+        keep_chroms = chroms_gt_cutoff #chroms_no_mito if atacseq else ''
     threads: 8
     resources:
         mem_gb=80
@@ -252,6 +256,48 @@ rule filt_bams:
 
         """
 
+rule filt_bams_nfr:
+    """
+    Keep only paired alignments with <150 bp fragment size.
+    """
+    input:
+        "analysis/filt_bams/{sample}_filt_alns.bam"
+    output:
+        bam="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam",
+        bai="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam.bai",
+        idxstat="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam.idxstat",
+        metrics="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam.metrics"
+    log:
+        stdout="logs/filt_bams_nfr/{sample}.o",
+        stderr="logs/filt_bams_nfr/{sample}.e",
+    benchmark:
+        "benchmarks/filt_bams_nfr/{sample}.txt"
+    params:
+        temp=os.path.join(snakemake_dir, "tmp"),
+        maxFragmentSize = 150,
+    threads: 8
+    envmodules:
+        "bbc/deeptools/deeptools-3.4.3",
+        "bbc/samtools/samtools-1.9"
+    resources:
+        mem_gb=80
+    shell:
+        """
+        export TMPDIR={params.temp}
+        
+        alignmentSieve --bam {input} \
+        --outFile {output.bam} \
+        -p {threads} \
+        --filterMetrics {output.metrics} \
+        --maxFragmentLength {params.maxFragmentSize} \
+        2> {log.stderr} 
+        
+        samtools index {output.bam}
+        samtools idxstats {output.bam} > {output.idxstat}
+
+        """
+
+
 rule deeptools_cov_keepdups:
     input:
         bam="analysis/filt_bams/{sample}_filt_alns.bam"
@@ -267,7 +313,7 @@ rule deeptools_cov_keepdups:
         binsize=bamCoverage_binsize,
         norm_method="CPM",
         sam_keep="64",
-        temp=os.path.join(snakemake_dir, "analysis/deeptools_cov_keepdups/{sample}_tmp")
+        temp=os.path.join(snakemake_dir, "tmp")
     threads: 16
     envmodules:
         "bbc/deeptools/deeptools-3.4.3"
@@ -276,7 +322,6 @@ rule deeptools_cov_keepdups:
     shell:
         """
         export TMPDIR={params.temp}
-        [[ -d $TMPDIR ]] || mkdir -p $TMPDIR
         
         # calculate the coverage
         ## Since this is PE data, we can use '--extendReads' to extend the reads to connect the two mates.
@@ -289,7 +334,7 @@ rule deeptools_cov_keepdups:
         -o {output.bigwig_keepdups} \
         --binSize {params.binsize} \
         --normalizeUsing {params.norm_method} \
-        --samFlagInclude {params.sam_keep} 
+        --samFlagInclude {params.sam_keep}
 
         """
 
@@ -332,7 +377,10 @@ rule deeptools_fingerprint:
         """
 
 def get_macs2_bams(wildcards):
-    macs2_bams = { 'trt': "analysis/filt_bams/{sample}_filt_alns.bam".format(sample=wildcards.sample) }
+    if (config['atacseq'] and wildcards.macs2_type == "macs2_nfr"):
+        macs2_bams = { 'trt': "analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam".format(sample=wildcards.sample) }
+    elif (wildcards.macs2_type == "macs2"):
+        macs2_bams = { 'trt': "analysis/filt_bams/{sample}_filt_alns.bam".format(sample=wildcards.sample) }
     
     control = samples[samples['sample'] == wildcards.sample]['control'].values[0]
     
@@ -346,14 +394,14 @@ rule macs2:
         #trt="analysis/filt_bams/{sample}_filt_alns.bam",
         #control=get_macs2_control,
     output:
-        multiext("analysis/macs2/{sample}_macs2_broad_peaks", ".xls", ".broadPeak"),
-        multiext("analysis/macs2/{sample}_macs2_narrow_peaks", ".xls", ".narrowPeak"),
-        "analysis/macs2/{sample}_macs2_narrow_summits.bed",
+        multiext("analysis/{macs2_type}/{sample}_macs2_broad_peaks", ".xls", ".broadPeak"),
+        multiext("analysis/{macs2_type}/{sample}_macs2_narrow_peaks", ".xls", ".narrowPeak"),
+        "analysis/{macs2_type}/{sample}_macs2_narrow_summits.bed",
     log:
-        stdout="logs/macs2/{sample}.o",
-        stderr="logs/macs2/{sample}.e"
+        stdout="logs/{macs2_type}/{sample}.o",
+        stderr="logs/{macs2_type}/{sample}.e"
     benchmark:
-        "benchmarks/macs2/{sample}.txt"
+        "benchmarks/{macs2_type}/{sample}.txt"
     params:
         control_param=lambda wildcards, input: "-c "+input.control if len(input) > 1 else '',
         #lambda wildcards, input: print(len(input))
@@ -362,7 +410,7 @@ rule macs2:
         q_cutoff="0.05",
         broad_name="{sample}_macs2_broad",
         narrow_name="{sample}_macs2_narrow",
-        outdir="analysis/macs2/",
+        outdir="analysis/{macs2_type}/",
         temp_dir="tmp/"
     envmodules:
         "bbc/macs2/macs2-2.2.7.1"
@@ -462,6 +510,12 @@ def get_peaks_for_merging (wildcards):
         return(expand("analysis/macs2/{sample}_macs2_narrow_peaks.narrowPeak", sample=samples['sample'].values))
     if wildcards.peak_type == "macs2_broad":
         return(expand("analysis/macs2/{sample}_macs2_broad_peaks.broadPeak", sample=samples['sample'].values))
+    if wildcards.peak_type == "macs2_nfr_narrow":
+        return(expand("analysis/macs2_nfr/{sample}_macs2_narrow_peaks.narrowPeak", sample=samples['sample'].values))
+    if wildcards.peak_type == "macs2_nfr_broad":
+        return(expand("analysis/macs2_nfr/{sample}_macs2_broad_peaks.broadPeak", sample=samples['sample'].values))
+    if wildcards.peak_type == "hmmratac_nfr":
+        return(expand("analysis/hmmratac/{sample}_peaks.filteredPeaks.openOnly.bed", sample=samples['sample'].values))
 
 
 rule merge_all_peaks:
@@ -491,16 +545,16 @@ rule rm_blacklist_peaks:
     Remove blacklist regions from macs2 peaks using overlap of 1bp or more
     """
     input:
-        broad="analysis/macs2/{sample}_macs2_broad_peaks.broadPeak",
-        narrow="analysis/macs2/{sample}_macs2_narrow_peaks.narrowPeak"
+        broad="analysis/{macs2_type}/{sample}_macs2_broad_peaks.broadPeak",
+        narrow="analysis/{macs2_type}/{sample}_macs2_narrow_peaks.narrowPeak"
     output:
-        broad="analysis/peaks_rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak",
-        narrow="analysis/peaks_rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak"
+        broad="analysis/{macs2_type}/rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak",
+        narrow="analysis/{macs2_type}/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak"
     log:
-        stdout="logs/rm_blacklist_peaks/{sample}.o",
-        stderr="logs/rm_blacklist_peaks/{sample}.e"
+        stdout="logs/{macs2_type}/rm_blacklist/{sample}.o",
+        stderr="logs/{macs2_type}/rm_blacklist/{sample}.e"
     benchmark:
-        "benchmarks/rm_blacklist_peaks/{sample}.txt"
+        "benchmarks/{macs2_type}/rm_blacklist/{sample}.txt"
     params:
         blacklist=blacklist,
     envmodules:
@@ -527,13 +581,25 @@ rule rm_blacklist_peaks:
 #        return("analysis/macs2/{sample}_macs2_narrow_peaks.narrowPeak")
 #    elif frip_peakset=="broad":
 #        return("analysis/macs2/{sample}_macs2_broad_peaks.broadPeak")
+
+def get_peaks_for_venn (wildcards):
+    peaks = {
+            "broad": expand("analysis/macs2/rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak", sample=samples_no_controls['sample'].values),
+            "narrow": expand("analysis/macs2/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples_no_controls['sample'].values)    
+    }
+    if (config['atacseq']):
+        peaks['broad_nfr'] = expand("analysis/macs2_nfr/rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak", sample=samples_no_controls['sample'].values)
+        peaks['narrow_nfr'] = expand("analysis/macs2_nfr/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples_no_controls['sample'].values)
+        peaks['hmmratac_nfr'] = expand("analysis/hmmratac/{sample}_peaks.filteredPeaks.openOnly.bed", sample=samples_no_controls['sample'].values)
+
+    return peaks
+
 rule peaks_venn:
     """
     Make Venn diagrams for peaksets of each peak type. Note that only first 5 samples are plotted.
     """
     input:
-        broad=expand("analysis/peaks_rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak", sample=samples_no_controls['sample'].values),
-        narrow=expand("analysis/peaks_rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples_no_controls['sample'].values),
+        unpack(get_peaks_for_venn)
     output:
         "analysis/peaks_venn/report.html"
     log:
@@ -555,8 +621,8 @@ rule peaks_venn:
 rule deeptools_plotenrichment:
     input:
         bam="analysis/filt_bams/{sample}_filt_alns.bam",
-        bed=[expand("analysis/macs2/{{sample}}_macs2_{type}_peaks.{type}Peak", type=['narrow','broad']),
-        expand("analysis/merge_all_peaks/all_merged_{peak_type}.bed", peak_type=['macs2_narrow','macs2_broad'])],
+        bed=[expand("analysis/{macs2_type}/{{sample}}_macs2_{type}_peaks.{type}Peak", type=['narrow','broad'], macs2_type=['macs2','macs2_nfr'] if config['atacseq'] else['macs2']),
+        expand("analysis/merge_all_peaks/all_merged_{peak_type}.bed", peak_type=['macs2_narrow','macs2_broad', 'macs2_nfr_narrow','macs2_nfr_broad','hmmratac_nfr'] if config['atacseq'] else ['macs2'])],
     output:
         #merged_peaks="analysis/deeptools_plotenrichment/{sample}.narrowPeak",
         plot="analysis/deeptools_plotenrichment/{sample}.pdf",
@@ -707,6 +773,7 @@ rule multiqc:
     shell:
         """
         multiqc \
+        --force \
         --outdir {params.workdir} \
         --filename {params.outfile} \
         {params.dirs}
