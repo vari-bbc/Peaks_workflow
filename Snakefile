@@ -266,7 +266,7 @@ rule filt_bams_nfr:
         bam="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam",
         bai="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam.bai",
         idxstat="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam.idxstat",
-        metrics="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam.metrics"
+        #metrics="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam.metrics"
     log:
         stdout="logs/filt_bams_nfr/{sample}.o",
         stderr="logs/filt_bams_nfr/{sample}.e",
@@ -274,23 +274,19 @@ rule filt_bams_nfr:
         "benchmarks/filt_bams_nfr/{sample}.txt"
     params:
         temp=os.path.join(snakemake_dir, "tmp"),
-        maxFragmentSize = 150,
+        maxFragmentSize = '150',
     threads: 8
     envmodules:
-        "bbc/deeptools/deeptools-3.4.3",
+        "bbc/bamtools/bamtools-2.5.1",
+        #"bbc/deeptools/deeptools-3.4.3",
         "bbc/samtools/samtools-1.9"
     resources:
         mem_gb=80
     shell:
         """
         export TMPDIR={params.temp}
-        
-        alignmentSieve --bam {input} \
-        --outFile {output.bam} \
-        -p {threads} \
-        --filterMetrics {output.metrics} \
-        --maxFragmentLength {params.maxFragmentSize} \
-        2> {log.stderr} 
+       
+        bamtools filter  -insertSize "<={params.maxFragmentSize}" -in {input} -out {output.bam}
         
         samtools index {output.bam}
         samtools idxstats {output.bam} > {output.idxstat}
