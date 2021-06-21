@@ -654,7 +654,7 @@ rule deeptools_plotenrichment:
 
         plotEnrichment \
         --bamfiles {input.bam} \
-        --BED {input.bed} \
+        --BED {input.bed} {input.merged_beds} \
         --smartLabels \
         --variableScales \
         --outRawCounts {output.rawcts} \
