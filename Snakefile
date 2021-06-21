@@ -590,7 +590,8 @@ def get_peaks_for_venn (wildcards):
     if (config['atacseq']):
         peaks['broad_nfr'] = expand("analysis/macs2_nfr/rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak", sample=samples_no_controls['sample'].values)
         peaks['narrow_nfr'] = expand("analysis/macs2_nfr/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples_no_controls['sample'].values)
-        peaks['hmmratac_nfr'] = expand("analysis/hmmratac/{sample}_peaks.filteredPeaks.openOnly.bed", sample=samples_no_controls['sample'].values)
+        if (config['run_hmmratac']):
+            peaks['hmmratac_nfr'] = expand("analysis/hmmratac/{sample}_peaks.filteredPeaks.openOnly.bed", sample=samples_no_controls['sample'].values)
 
     return peaks
 
@@ -618,11 +619,19 @@ rule peaks_venn:
     script:
         "bin/peaks_venn.Rmd"
 
+def get_merged_beds (wildcards):
+    atac_peak_types = ['macs2_narrow','macs2_broad', 'macs2_nfr_narrow','macs2_nfr_broad']
+    if config['run_hmmratac']:
+        atac_peak_types = atac_peak_types + ['hmmratac_nfr']# if config['run_hmmratac']
+    merged_beds = expand("analysis/merge_all_peaks/all_merged_{peak_type}.bed", peak_type=atac_peak_types if config['atacseq'] else ['macs2_narrow','macs2_broad'])
+    return (merged_beds)
+
 rule deeptools_plotenrichment:
     input:
         bam="analysis/filt_bams/{sample}_filt_alns.bam",
-        bed=[expand("analysis/{macs2_type}/{{sample}}_macs2_{type}_peaks.{type}Peak", type=['narrow','broad'], macs2_type=['macs2','macs2_nfr'] if config['atacseq'] else['macs2']),
-        expand("analysis/merge_all_peaks/all_merged_{peak_type}.bed", peak_type=['macs2_narrow','macs2_broad', 'macs2_nfr_narrow','macs2_nfr_broad','hmmratac_nfr'] if config['atacseq'] else ['macs2'])],
+        bed=expand("analysis/{macs2_type}/{{sample}}_macs2_{type}_peaks.{type}Peak", type=['narrow','broad'], macs2_type=['macs2','macs2_nfr'] if config['atacseq'] else['macs2']),
+        merged_beds=get_merged_beds,
+        #expand("analysis/merge_all_peaks/all_merged_{peak_type}.bed", peak_type=['macs2_narrow','macs2_broad', 'macs2_nfr_narrow','macs2_nfr_broad','hmmratac_nfr'] if config['atacseq'] else ['macs2_narrow','macs2_broad'])],
     output:
         #merged_peaks="analysis/deeptools_plotenrichment/{sample}.narrowPeak",
         plot="analysis/deeptools_plotenrichment/{sample}.pdf",
