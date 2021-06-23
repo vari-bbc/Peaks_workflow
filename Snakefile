@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import os
 import re
+import itertools
 from snakemake.utils import validate, min_version
 ##### set minimum snakemake version #####
 min_version("5.28.0")
@@ -33,7 +34,8 @@ chroms_gt_cutoff = ' '.join(fai_parsed[fai_parsed['len'] > chrom_min_bp]['chr'].
 samples = pd.read_table("bin/samples.tsv")
 
 # Filter for sample rows that are not controls
-samples_no_controls = samples[-samples['sample'].isin(samples['control'].values)]
+controls_list = list(itertools.chain.from_iterable( [x.split(',') for x in samples['control'].values if not pd.isnull(x)] ))
+samples_no_controls = samples[-samples['sample'].isin(controls_list)]
 
 snakemake_dir = os.getcwd() + "/"
 
