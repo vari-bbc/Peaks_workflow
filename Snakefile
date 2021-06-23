@@ -56,7 +56,7 @@ rule all:
         "analysis/deeptools_fingerprint/fingerprint.rawcts",
         #expand("analysis/peaks_rm_blacklist/{sample}_macs2_{size}_peaks.rm_blacklist.{size}Peak", sample=samples["sample"], size=["narrow","broad"]),
         #expand("analysis/hmmratac/{sample}_summits.bed", sample=samples["sample"]) if config['atacseq'] else [],
-        expand("analysis/deeptools_plotenrichment/{sample}.pdf", sample=samples["sample"]),
+        expand("analysis/deeptools_plotenrichment/{sample}.pdf", sample=samples_no_controls["sample"]),
         expand("analysis/filt_bams_nfr/CollectInsertSizeMetrics/{sample.sample}_filt_alns_nfr.insert_size_metrics.txt", sample=samples.itertuples()) if config['atacseq'] else [],
         "analysis/peaks_venn/report.html",
 
@@ -381,7 +381,7 @@ def get_macs2_bams(wildcards):
     control = samples[samples['sample'] == wildcards.sample]['control'].values[0]
     
     if (not pd.isnull(control)):
-        macs2_bams['control'] = "analysis/filt_bams/{sample}_filt_alns.bam".format(sample=control)
+        macs2_bams['control'] = expand("analysis/filt_bams/{sample}_filt_alns.bam", sample = control.split(','))
     return macs2_bams
 
 rule macs2:
@@ -399,7 +399,7 @@ rule macs2:
     benchmark:
         "benchmarks/{macs2_type}/{sample}.txt"
     params:
-        control_param=lambda wildcards, input: "-c "+input.control if len(input) > 1 else '',
+        control_param=lambda wildcards, input: "-c " + ' '.join(input.control) if 'control' in input.keys() else '',
         #lambda wildcards, input: print(len(input))
             #"-c {input.control}" if input.has_key('control') else '',
         species=macs2_species,
@@ -503,15 +503,15 @@ rule hmmratac:
 
 def get_peaks_for_merging (wildcards):
     if wildcards.peak_type == "macs2_narrow":
-        return(expand("analysis/macs2/{sample}_macs2_narrow_peaks.narrowPeak", sample=samples['sample'].values))
+        return(expand("analysis/macs2/{sample}_macs2_narrow_peaks.narrowPeak", sample=samples_no_controls['sample'].values))
     if wildcards.peak_type == "macs2_broad":
-        return(expand("analysis/macs2/{sample}_macs2_broad_peaks.broadPeak", sample=samples['sample'].values))
+        return(expand("analysis/macs2/{sample}_macs2_broad_peaks.broadPeak", sample=samples_no_controls['sample'].values))
     if wildcards.peak_type == "macs2_nfr_narrow":
-        return(expand("analysis/macs2_nfr/{sample}_macs2_narrow_peaks.narrowPeak", sample=samples['sample'].values))
+        return(expand("analysis/macs2_nfr/{sample}_macs2_narrow_peaks.narrowPeak", sample=samples_no_controls['sample'].values))
     if wildcards.peak_type == "macs2_nfr_broad":
-        return(expand("analysis/macs2_nfr/{sample}_macs2_broad_peaks.broadPeak", sample=samples['sample'].values))
+        return(expand("analysis/macs2_nfr/{sample}_macs2_broad_peaks.broadPeak", sample=samples_no_controls['sample'].values))
     if wildcards.peak_type == "hmmratac_nfr":
-        return(expand("analysis/hmmratac/{sample}_peaks.filteredPeaks.openOnly.bed", sample=samples['sample'].values))
+        return(expand("analysis/hmmratac/{sample}_peaks.filteredPeaks.openOnly.bed", sample=samples_no_controls['sample'].values))
 
 
 rule merge_all_peaks:
@@ -740,8 +740,8 @@ rule multiqc:
     input:
         expand("analysis/fastqc/{sample.sample}_R{read}_fastqc.html", sample=samples.itertuples(), read=["1","2"]),
         expand("analysis/trim_galore/{sample.sample}_R{read}_val_{read}_fastqc.html", sample=samples.itertuples(), read=["1","2"]),
-        expand("analysis/preseq_complexity/{sample.sample}.c_curve.txt", sample=samples.itertuples()),
-        expand("analysis/preseq_complexity/{sample.sample}.lc_extrap.txt", sample=samples.itertuples()),
+        expand("analysis/preseq_complexity/{sample.sample}.c_curve.txt", sample=samples[samples['sample']!="K27ac_B6_cDC1_PBS_3"].itertuples()),
+        expand("analysis/preseq_complexity/{sample.sample}.lc_extrap.txt", sample=samples[samples['sample']!="K27ac_B6_cDC1_PBS_3"].itertuples()),
         #expand("analysis/fastp/{sample.sample}_fastp.html", sample=samples.itertuples()),
         expand("analysis/bwamem/flagstat/{sample.sample}.flagstat", sample=samples.itertuples()),
         expand("analysis/filt_bams/{sample.sample}_filt_alns.bam.idxstat", sample=samples.itertuples()),
@@ -749,7 +749,7 @@ rule multiqc:
         expand("analysis/bwamem/CollectAlignmentSummaryMetrics/{sample.sample}.aln_metrics.txt", sample=samples.itertuples()),
         #expand("analysis/align/{sample.sample}_vs_mm10.bam.flagstat", sample=samples.itertuples()),
         expand("analysis/fastq_screen/{sample.sample}_R{read}_screen.html", sample=samples.itertuples(), read=["1","2"]),
-        expand("analysis/deeptools_plotenrichment/{sample.sample}.rawcts", sample=samples.itertuples()),
+        expand("analysis/deeptools_plotenrichment/{sample.sample}.rawcts", sample=samples_no_controls.itertuples()),
     output:
         "analysis/multiqc/multiqc_report.html",
     log:
