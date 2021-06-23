@@ -742,8 +742,8 @@ rule multiqc:
     input:
         expand("analysis/fastqc/{sample.sample}_R{read}_fastqc.html", sample=samples.itertuples(), read=["1","2"]),
         expand("analysis/trim_galore/{sample.sample}_R{read}_val_{read}_fastqc.html", sample=samples.itertuples(), read=["1","2"]),
-        expand("analysis/preseq_complexity/{sample.sample}.c_curve.txt", sample=samples[samples['sample']!="K27ac_B6_cDC1_PBS_3"].itertuples()),
-        expand("analysis/preseq_complexity/{sample.sample}.lc_extrap.txt", sample=samples[samples['sample']!="K27ac_B6_cDC1_PBS_3"].itertuples()),
+        expand("analysis/preseq_complexity/{sample.sample}.c_curve.txt", sample=samples.itertuples()),
+        expand("analysis/preseq_complexity/{sample.sample}.lc_extrap.txt", sample=samples.itertuples()),
         #expand("analysis/fastp/{sample.sample}_fastp.html", sample=samples.itertuples()),
         expand("analysis/bwamem/flagstat/{sample.sample}.flagstat", sample=samples.itertuples()),
         expand("analysis/filt_bams/{sample.sample}_filt_alns.bam.idxstat", sample=samples.itertuples()),
