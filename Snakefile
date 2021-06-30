@@ -53,7 +53,7 @@ include: os.path.join(shared_snakemake_dir, "post_alignment/CollectAlignmentSumm
 rule all:
     input:
         #expand("analysis/filt_bams/{sample.sample}_filt_alns.bam", sample=samples.itertuples()),
-        expand("analysis/deeptools_cov_keepdups/{sample.sample}_filt_alns_keepdups.bw", sample=samples.itertuples()),
+        expand("analysis/deeptools_cov_keepdups/{sample.sample}_filt_alns_rmdups.bw", sample=samples.itertuples()),
         "analysis/multiqc/multiqc_report.html",
         "analysis/deeptools_fingerprint/fingerprint.rawcts",
         #expand("analysis/peaks_rm_blacklist/{sample}_macs2_{size}_peaks.rm_blacklist.{size}Peak", sample=samples["sample"], size=["narrow","broad"]),
@@ -333,6 +333,48 @@ rule deeptools_cov_keepdups:
         --binSize {params.binsize} \
         --normalizeUsing {params.norm_method} \
         --samFlagInclude {params.sam_keep}
+
+        """
+
+rule deeptools_cov_rmdups:
+    input:
+        bam="analysis/filt_bams/{sample}_filt_alns.bam"
+    output:
+        bigwig_rmdups="analysis/deeptools_cov_rmdups/{sample}_filt_alns_rmdups.bw"
+    log:
+        stdout="logs/deeptools_cov_rmdups/{sample}.o",
+        stderr="logs/deeptools_cov_rmdups/{sample}.e"
+    benchmark:
+        "benchmarks/deeptools_cov_rmdups/{sample}.txt"
+    params:
+        blacklist=blacklist,
+        binsize=bamCoverage_binsize,
+        norm_method="CPM",
+        sam_keep="64",
+        sam_exclude="1024",
+        temp=os.path.join(snakemake_dir, "tmp")
+    threads: 16
+    envmodules:
+        "bbc/deeptools/deeptools-3.4.3"
+    resources:
+        mem_gb=96
+    shell:
+        """
+        export TMPDIR={params.temp}
+        
+        # calculate the coverage
+        ## Since this is PE data, we can use '--extendReads' to extend the reads to connect the two mates.
+        bamCoverage \
+        -p {threads} \
+        --binSize {params.binsize} \
+        --bam {input.bam} \
+        --extendReads \
+        --blackListFileName {params.blacklist} \
+        -o {output.bigwig_rmdups} \
+        --binSize {params.binsize} \
+        --normalizeUsing {params.norm_method} \
+        --samFlagInclude {params.sam_keep} \
+         --samFlagExclude {params.sam_exclude}
 
         """
 
