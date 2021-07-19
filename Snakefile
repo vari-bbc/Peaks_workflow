@@ -53,7 +53,7 @@ include: os.path.join(shared_snakemake_dir, "post_alignment/CollectAlignmentSumm
 rule all:
     input:
         #expand("analysis/filt_bams/{sample.sample}_filt_alns.bam", sample=samples.itertuples()),
-        expand("analysis/deeptools_cov_keepdups/{sample.sample}_filt_alns_rmdups.bw", sample=samples.itertuples()),
+        expand("analysis/deeptools_cov_rmdups/{sample.sample}_filt_alns_rmdups.bw", sample=samples.itertuples()),
         "analysis/multiqc/multiqc_report.html",
         "analysis/deeptools_fingerprint/fingerprint.rawcts",
         #expand("analysis/peaks_rm_blacklist/{sample}_macs2_{size}_peaks.rm_blacklist.{size}Peak", sample=samples["sample"], size=["narrow","broad"]),
