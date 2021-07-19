@@ -31,11 +31,13 @@ chroms_gt_cutoff = ' '.join(fai_parsed[fai_parsed['len'] > chrom_min_bp]['chr'].
 
 ##### load config and sample sheets #####
 
-samples = pd.read_table("bin/samples.tsv")
+units = pd.read_table("bin/samples.tsv")
+samples = units[["sample","control"]].drop_duplicates()
 
 # Filter for sample rows that are not controls
 controls_list = list(itertools.chain.from_iterable( [x.split(',') for x in samples['control'].values if not pd.isnull(x)] ))
 samples_no_controls = samples[-samples['sample'].isin(controls_list)]
+
 
 snakemake_dir = os.getcwd() + "/"
 
@@ -64,9 +66,9 @@ rule all:
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
-            fastq = expand("raw_data/{fq}", fq = samples[samples["sample"] == wildcards.sample]["fq1"].values)
+            fastq = expand("raw_data/{fq}", fq = units[units["sample"] == wildcards.sample]["fq1"].values)
     elif wildcards.read == "R2":
-            fastq = expand("raw_data/{fq}", fq = samples[samples["sample"] == wildcards.sample]["fq2"].values)
+            fastq = expand("raw_data/{fq}", fq = units[units["sample"] == wildcards.sample]["fq2"].values)
     return fastq 
 
 rule rename_fastqs:
