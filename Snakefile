@@ -118,7 +118,7 @@ rule fastqc:
     benchmark:
         "benchmarks/fastqc/{fq_pref}.txt"
     envmodules:
-        "bbc/fastqc/fastqc-0.11.9"
+        "config['modules']['fastqc']"
     threads: 1
     resources:
         mem_gb = 32
@@ -143,7 +143,7 @@ rule fastq_screen:
     benchmark:
         "benchmarks/fastq_screen/{fq_pref}.txt"
     envmodules:
-        "bbc/fastq_screen/fastq_screen-0.14.0"
+        "config['modules']['fastq_screen']"
     threads: 8
     resources:
         mem_gb = 32
@@ -168,7 +168,7 @@ rule trim_galore_PE:
     benchmark:
         "benchmarks/trim_galore/{sample}.txt"
     envmodules:
-        "bbc/trim_galore/trim_galore-0.6.0"
+        "config['modules']['trim_galore']"
     threads: 4
     resources:
         mem_gb = 64
@@ -193,9 +193,9 @@ rule bwamem:
         bwa_idx=bwa_index,
     threads: 16
     envmodules:
-        "bbc/bwa/bwa-0.7.17",
-        "bbc/samblaster/samblaster-0.1.24",
-        "bbc/samtools/samtools-1.9",
+        "config['modules']['bwa']",
+        "config['modules']['samblaster']",
+        "config['modules']['samtools']",
     resources:
         mem_gb=180
     shell:
@@ -251,7 +251,7 @@ rule filt_bams:
     resources:
         mem_gb=80
     envmodules:
-        "bbc/samtools/samtools-1.9"
+        "config['modules']['samtools']"
     shell:
         """
         samtools view \
@@ -287,9 +287,9 @@ rule filt_bams_nfr:
         maxFragmentSize = '150',
     threads: 8
     envmodules:
-        "bbc/bamtools/bamtools-2.5.1",
-        #"bbc/deeptools/deeptools-3.4.3",
-        "bbc/samtools/samtools-1.9"
+        "config['modules']['bamtools']",
+        #"config['modules']['deeptools']",
+        "config['modules']['samtools']"
     resources:
         mem_gb=80
     shell:
@@ -322,7 +322,7 @@ rule deeptools_cov_keepdups:
         temp=os.path.join(snakemake_dir, "tmp")
     threads: 16
     envmodules:
-        "bbc/deeptools/deeptools-3.4.3"
+        "config['modules']['deeptools']"
     resources:
         mem_gb=96
     shell:
@@ -363,7 +363,7 @@ rule deeptools_cov_rmdups:
         temp=os.path.join(snakemake_dir, "tmp")
     threads: 16
     envmodules:
-        "bbc/deeptools/deeptools-3.4.3"
+        "config['modules']['deeptools']"
     resources:
         mem_gb=96
     shell:
@@ -443,7 +443,7 @@ rule merge_bigwigs:
                    in_chroms=input.chromsizes)
     threads: 8
     envmodules:
-        "bbc/ucsc/ucsc-2020.06.11"
+        "config['modules']['ucsc']"
     resources:
         mem_gb=96
     shell:
@@ -469,7 +469,7 @@ rule deeptools_fingerprint:
         temp=tmp_dir
     threads: 16
     envmodules:
-        "bbc/deeptools/deeptools-3.4.3"
+        "config['modules']['deeptools']"
     resources:
         mem_gb=160
     shell:
@@ -526,7 +526,7 @@ rule macs2:
         outdir="analysis/{macs2_type}/",
         temp_dir="tmp/"
     envmodules:
-        "bbc/macs2/macs2-2.2.7.1"
+        "config['modules']['macs2']"
     threads: 1
     resources:
         mem_gb=100
@@ -585,8 +585,8 @@ rule hmmratac:
     benchmark:
         "benchmarks/hmmratac/{sample}.txt"
     envmodules:
-        "bbc/HMMRATAC/HMMRATAC-1.2.10",
-        "bbc/samtools/samtools-1.9"
+        "config['modules']['HMMRATAC']",
+        "config['modules']['samtools']"
     params:
         outpref="analysis/hmmratac/{sample}",
         temp_dir="analysis/hmmratac/{sample}.tmp/",
@@ -643,7 +643,7 @@ rule merge_all_peaks:
         "benchmarks/merge_all_peaks/{peak_type}.txt"
     params:
     envmodules:
-        "bbc/bedops/bedops-2.4.37"
+        "config['modules']['bedops']"
     threads: 4
     resources:
         mem_gb=100
@@ -671,7 +671,7 @@ rule rm_blacklist_peaks:
     params:
         blacklist=blacklist,
     envmodules:
-        "bbc/bedtools/bedtools-2.29.2"
+        "config['modules']['bedtools']"
     threads: 4
     resources:
         mem_gb=100
@@ -725,7 +725,7 @@ rule peaks_venn:
         out_dir="analysis/peaks_venn/peaks_venn_out_files/",
         sample_names=samples_no_controls['sample'].values,
     envmodules:
-        "bbc/R/R-4.0.2-setR_LIBS_USER"
+        "config['modules']['R']"
     threads: 1
     resources:
         mem_gb = 60
@@ -761,8 +761,8 @@ rule deeptools_plotenrichment:
         #sam_exclude="1024",    
     threads: 16
     envmodules:
-        "bbc/bedops/bedops-2.4.37",
-        "bbc/deeptools/deeptools-3.4.3"
+        "config['modules']['bedops']",
+        "config['modules']['deeptools']"
     resources:
         mem_gb=100
     shell:
@@ -797,7 +797,7 @@ rule rm_supplementary_alns:
     benchmark:
         "benchmarks/rm_supplementary_alns/{bam_name}.txt"
     envmodules:
-        "bbc/samtools/samtools-1.9"
+        "config['modules']['samtools']"
     threads: 8
     resources:
         mem_gb = 32
@@ -811,7 +811,7 @@ rule preseq_complexity:
     Run preseq c_curve and lc_extrap on the BAMs after removal of supplementary alignments.
     """
     input:
-        "analysis/rm_supplementary_alns/{sample}.F2048.bam",
+        "analysis/rm_supplementary_alns/{sample}.F2304.bam",
     output:
         ccurve="analysis/preseq_complexity/{sample}.c_curve.txt",
         lcextrap="analysis/preseq_complexity/{sample}.lc_extrap.txt"
@@ -821,7 +821,7 @@ rule preseq_complexity:
     benchmark:
         "benchmarks/preseq_complexity/{sample}.txt"
     envmodules:
-        "bbc/preseq/preseq-2.0.3"
+        "config['modules']['preseq']"
     params:
     resources:
         mem_gb=100
@@ -888,7 +888,7 @@ rule multiqc:
         "analysis/deeptools_plotenrichment/"],
         outfile="multiqc_report"
     envmodules:
-        "bbc/multiqc/multiqc-1.9"
+        "config['modules']['multiqc']"
     threads: 4
     resources:
         mem_gb=100

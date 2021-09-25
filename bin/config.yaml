@@ -26,3 +26,21 @@ macs2:
 gtf_for_tss_heatmap: /varidata/research/projects/bbc/versioned_references/2021-08-10_11.12.27_v6/data/mm10_gencode/annotation/mm10_gencode.basic.gtf
 
 shared_snakemake_repo: "/secondary/projects/bbc/research/shared_snakemake/"
+
+modules:
+  bamtools: bbc/bamtools/bamtools-2.5.1
+  bedops: bbc/bedops/bedops-2.4.37
+  bedtools: bbc/bedtools/bedtools-2.29.2
+  bwa: bbc/bwa/bwa-0.7.17
+  deeptools: bbc/deeptools/deeptools-3.4.3
+  fastqc: bbc/fastqc/fastqc-0.11.9
+  fastq_screen: bbc/fastq_screen/fastq_screen-0.14.0
+  HMMRATAC: bbc/HMMRATAC/HMMRATAC-1.2.10
+  macs2: bbc/macs2/macs2-2.2.7.1
+  multiqc: bbc/multiqc/multiqc-1.9
+  preseq: bbc/preseq/preseq-2.0.3
+  R: bbc/R/R-4.0.2-setR_LIBS_USER
+  samblaster: bbc/samblaster/samblaster-0.1.24
+  samtools: bbc/samtools/samtools-1.9
+  trim_galore: bbc/trim_galore/trim_galore-0.6.0
+  ucsc: bbc/ucsc/ucsc-2020.06.11
