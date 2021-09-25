@@ -118,7 +118,7 @@ rule fastqc:
     benchmark:
         "benchmarks/fastqc/{fq_pref}.txt"
     envmodules:
-        "config['modules']['fastqc']"
+        config['modules']['fastqc']
     threads: 1
     resources:
         mem_gb = 32
@@ -143,7 +143,7 @@ rule fastq_screen:
     benchmark:
         "benchmarks/fastq_screen/{fq_pref}.txt"
     envmodules:
-        "config['modules']['fastq_screen']"
+        config['modules']['fastq_screen']
     threads: 8
     resources:
         mem_gb = 32
@@ -169,7 +169,7 @@ rule trim_galore_PE:
     benchmark:
         "benchmarks/trim_galore/{sample}.txt"
     envmodules:
-        "config['modules']['trim_galore']"
+        config['modules']['trim_galore']
     threads: 4
     resources:
         mem_gb = 64
@@ -194,9 +194,9 @@ rule bwamem:
         bwa_idx=bwa_index,
     threads: 16
     envmodules:
-        "config['modules']['bwa']",
-        "config['modules']['samblaster']",
-        "config['modules']['samtools']",
+        config['modules']['bwa'],
+        config['modules']['samblaster'],
+        config['modules']['samtools'],
     resources:
         mem_gb=180
     shell:
@@ -252,7 +252,7 @@ rule filt_bams:
     resources:
         mem_gb=80
     envmodules:
-        "config['modules']['samtools']"
+        config['modules']['samtools']
     shell:
         """
         samtools view \
@@ -288,9 +288,9 @@ rule filt_bams_nfr:
         maxFragmentSize = '150',
     threads: 8
     envmodules:
-        "config['modules']['bamtools']",
-        #"config['modules']['deeptools']",
-        "config['modules']['samtools']"
+        config['modules']['bamtools'],
+        #config['modules']['deeptools'],
+        config['modules']['samtools']
     resources:
         mem_gb=80
     shell:
@@ -323,7 +323,7 @@ rule deeptools_cov_keepdups:
         temp=os.path.join(snakemake_dir, "tmp")
     threads: 16
     envmodules:
-        "config['modules']['deeptools']"
+        config['modules']['deeptools']
     resources:
         mem_gb=96
     shell:
@@ -364,7 +364,7 @@ rule deeptools_cov_rmdups:
         temp=os.path.join(snakemake_dir, "tmp")
     threads: 16
     envmodules:
-        "config['modules']['deeptools']"
+        config['modules']['deeptools']
     resources:
         mem_gb=96
     shell:
@@ -444,7 +444,7 @@ rule merge_bigwigs:
                    in_chroms=input.chromsizes)
     threads: 8
     envmodules:
-        "config['modules']['ucsc']"
+        config['modules']['ucsc']
     resources:
         mem_gb=96
     shell:
@@ -470,7 +470,7 @@ rule deeptools_fingerprint:
         temp=tmp_dir
     threads: 16
     envmodules:
-        "config['modules']['deeptools']"
+        config['modules']['deeptools']
     resources:
         mem_gb=160
     shell:
@@ -527,7 +527,7 @@ rule macs2:
         outdir="analysis/{macs2_type}/",
         temp_dir="tmp/"
     envmodules:
-        "config['modules']['macs2']"
+        config['modules']['macs2']
     threads: 1
     resources:
         mem_gb=100
@@ -586,8 +586,8 @@ rule hmmratac:
     benchmark:
         "benchmarks/hmmratac/{sample}.txt"
     envmodules:
-        "config['modules']['HMMRATAC']",
-        "config['modules']['samtools']"
+        config['modules']['HMMRATAC'],
+        config['modules']['samtools']
     params:
         outpref="analysis/hmmratac/{sample}",
         temp_dir="analysis/hmmratac/{sample}.tmp/",
@@ -644,7 +644,7 @@ rule merge_all_peaks:
         "benchmarks/merge_all_peaks/{peak_type}.txt"
     params:
     envmodules:
-        "config['modules']['bedops']"
+        config['modules']['bedops']
     threads: 4
     resources:
         mem_gb=100
@@ -672,7 +672,7 @@ rule rm_blacklist_peaks:
     params:
         blacklist=blacklist,
     envmodules:
-        "config['modules']['bedtools']"
+        config['modules']['bedtools']
     threads: 4
     resources:
         mem_gb=100
@@ -726,7 +726,7 @@ rule peaks_venn:
         out_dir="analysis/peaks_venn/peaks_venn_out_files/",
         sample_names=samples_no_controls['sample'].values,
     envmodules:
-        "config['modules']['R']"
+        config['modules']['R']
     threads: 1
     resources:
         mem_gb = 60
@@ -762,8 +762,8 @@ rule deeptools_plotenrichment:
         #sam_exclude="1024",    
     threads: 16
     envmodules:
-        "config['modules']['bedops']",
-        "config['modules']['deeptools']"
+        config['modules']['bedops'],
+        config['modules']['deeptools']
     resources:
         mem_gb=100
     shell:
@@ -798,7 +798,7 @@ rule rm_supplementary_alns:
     benchmark:
         "benchmarks/rm_supplementary_alns/{bam_name}.txt"
     envmodules:
-        "config['modules']['samtools']"
+        config['modules']['samtools']
     threads: 8
     resources:
         mem_gb = 32
@@ -822,7 +822,7 @@ rule preseq_complexity:
     benchmark:
         "benchmarks/preseq_complexity/{sample}.txt"
     envmodules:
-        "config['modules']['preseq']"
+        config['modules']['preseq']
     params:
     resources:
         mem_gb=100
@@ -889,7 +889,7 @@ rule multiqc:
         "analysis/deeptools_plotenrichment/"],
         outfile="multiqc_report"
     envmodules:
-        "config['modules']['multiqc']"
+        config['modules']['multiqc']
     threads: 4
     resources:
         mem_gb=100
