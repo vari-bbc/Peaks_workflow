@@ -159,8 +159,9 @@ rule trim_galore_PE:
     input:
         expand("analysis/renamed_data/{{sample}}_R{read}.fastq.gz", read=["1","2"])
     output:
-        expand("analysis/trim_galore/{{sample}}_R1{ext}", ext=["_val_1.fq.gz",".fastq.gz_trimming_report.txt","_val_1_fastqc.html"]),
-        expand("analysis/trim_galore/{{sample}}_R2{ext}", ext=["_val_2.fq.gz",".fastq.gz_trimming_report.txt","_val_2_fastqc.html"]),
+        temp(expand("analysis/trim_galore/{{sample}}_R{ext}", ext=["1_val_1.fq.gz","2_val_2.fq.gz"])),
+        expand("analysis/trim_galore/{{sample}}_R1{ext}", ext=[".fastq.gz_trimming_report.txt","_val_1_fastqc.html"]),
+        expand("analysis/trim_galore/{{sample}}_R2{ext}", ext=[".fastq.gz_trimming_report.txt","_val_2_fastqc.html"]),
     params:
     log:
         stdout="logs/trim_galore/{sample}.o",
