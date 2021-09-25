@@ -23,7 +23,7 @@ blacklist = config['ref']['blacklist']
 
 mito_chrom=config['ref']['mito_chr']
 fai_parsed = pd.read_table(ref_fai, names=['chr','len','offset','bases_per_line','bytes_per_line'])
-#chroms_no_mito = ' '.join(fai_parsed[fai_parsed['chr'] != mito_chrom]['chr'].values)
+chroms_no_mito = ' '.join(fai_parsed[fai_parsed['chr'] != mito_chrom]['chr'].values)
 
 # When we filter alignments for peak calling, we remove contigs smaller than 'cutoff'. This is meant to be a way to retain only the nuclear chromosomes (not mitochondrial).
 chrom_min_bp = config['ref']['chrom_min_bp']
@@ -227,6 +227,9 @@ rule bwamem:
         """
 
 rule filt_bams:
+    """
+    Filter for mapq score, properly paired, primary alignment, remove unmapped. Do not remove dup reads.
+    """
     input:
         "analysis/bwamem/{sample}.bam"
     output:
@@ -239,9 +242,10 @@ rule filt_bams:
     benchmark:
         "benchmarks/filt_bams/{sample}.txt"
     params:
-        mapq=20,
-        flags_to_exclude="2308",
-        keep_chroms = chroms_gt_cutoff #chroms_no_mito if atacseq else ''
+        mapq=30,
+        flags_to_exclude="780",
+        flags_to_include="2",
+        keep_chroms = chroms_no_mito #chroms_gt_cutoff #chroms_no_mito if atacseq else ''
     threads: 8
     resources:
         mem_gb=80
@@ -253,6 +257,7 @@ rule filt_bams:
               -@ {threads} \
               -q {params.mapq} \
               -F {params.flags_to_exclude} \
+              -f {params.flags_to_include} \
               -b -o {output.bam} {input} {params.keep_chroms}
 
         samtools index {output.bam}
