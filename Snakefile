@@ -32,7 +32,7 @@ chroms_gt_cutoff = ' '.join(fai_parsed[fai_parsed['len'] > chrom_min_bp]['chr'].
 ##### load config and sample sheets #####
 
 units = pd.read_table("bin/samples.tsv")
-samples = units[["sample","control"]].drop_duplicates()
+samples = units[["sample","control","sample_group"]].drop_duplicates()
 
 # Filter for sample rows that are not controls
 controls_list = list(itertools.chain.from_iterable( [x.split(',') for x in samples['control'].values if not pd.isnull(x)] ))
@@ -55,7 +55,8 @@ include: os.path.join(shared_snakemake_dir, "post_alignment/CollectAlignmentSumm
 rule all:
     input:
         #expand("analysis/filt_bams/{sample.sample}_filt_alns.bam", sample=samples.itertuples()),
-        expand("analysis/deeptools_cov_rmdups/{sample.sample}_filt_alns_rmdups.bw", sample=samples.itertuples()),
+        #expand("analysis/deeptools_cov_rmdups/{sample.sample}_filt_alns_rmdups.bw", sample=samples.itertuples()),
+        expand("analysis/merge_bigwigs/{group}.bw", group=pd.unique(samples['sample_group'])),
         "analysis/multiqc/multiqc_report.html",
         "analysis/deeptools_fingerprint/fingerprint.rawcts",
         #expand("analysis/peaks_rm_blacklist/{sample}_macs2_{size}_peaks.rm_blacklist.{size}Peak", sample=samples["sample"], size=["narrow","broad"]),
@@ -383,6 +384,71 @@ rule deeptools_cov_rmdups:
         --samFlagInclude {params.sam_keep} \
          --samFlagExclude {params.sam_exclude}
 
+        """
+
+rule prep_chromsizes_file:
+    input:
+        fai=config["ref"]["fai"]
+    output:
+        "analysis/prep_chromsizes_file/chrom_sizes.tsv"
+    log:
+        stdout="logs/prep_chromsizes_file/out.o",
+        stderr="logs/prep_chromsizes_file/err.e",
+    benchmark:
+        "benchmarks/prep_chromsizes_file/bench.txt"
+    params:
+    threads: 1
+    resources:
+        mem_gb=8
+    envmodules:
+    shell:
+        """
+        cut -f 1,2 {input.fai} > {output}
+
+        """
+
+rule merge_bigwigs:
+    input:
+        bigwigs=lambda wildcards: expand("analysis/deeptools_cov_rmdups/{sample}_filt_alns_rmdups.bw", sample=samples[samples['sample_group']==wildcards.group]['sample']),
+        chromsizes="analysis/prep_chromsizes_file/chrom_sizes.tsv"
+    output:
+        bedgraph=temp("analysis/merge_bigwigs/{group}.bedGraph"),
+        sorted_bg=temp("analysis/merge_bigwigs/{group}.sort.bedGraph"),
+        bigwig="analysis/merge_bigwigs/{group}.bw"
+    log:
+        stdout="logs/merge_bigwigs/{group}.o",
+        stderr="logs/merge_bigwigs/{group}.e"
+    benchmark:
+        "benchmarks/merge_bigwigs/{group}.txt"
+    params:
+        lambda wildcards, input, output:
+        ("""
+        # sum bigwigs at each interval
+        bigWigMerge {in_bw} {out_bg}
+
+        sort -k1,1 -k2,2n {out_bg} > {out_sorted_bg}
+
+        # convert to bigwig
+        bedGraphToBigWig {out_sorted_bg} {in_chroms} {out_bw}
+
+        """ if len(input.bigwigs) > 1 else """
+        ln -rs {in_bw} {out_bg} # placeholder file. Will be removed
+        ln -rs {in_bw} {out_sorted_bg} # placeolder file. Will be removed
+        ln -rs {in_bw} {out_bw}
+
+        """).format(in_bw=input.bigwigs,
+                   out_bg=output.bedgraph,
+                   out_sorted_bg=output.sorted_bg,
+                   out_bw=output.bigwig,
+                   in_chroms=input.chromsizes)
+    threads: 8
+    envmodules:
+        "bbc/ucsc/ucsc-2020.06.11"
+    resources:
+        mem_gb=96
+    shell:
+        """
+        {params}
         """
 
 rule deeptools_fingerprint:
