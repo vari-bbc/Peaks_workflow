@@ -23,6 +23,9 @@ blacklist = config['ref']['blacklist']
 
 mito_chrom=config['ref']['mito_chr']
 fai_parsed = pd.read_table(ref_fai, names=['chr','len','offset','bases_per_line','bytes_per_line'])
+if mito_chrom not in fai_parsed['chr'].values:
+    raise Exception('{mito} not found in reference fai file.'.format(mito=mito_chrom))
+
 chroms_no_mito = ' '.join(fai_parsed[fai_parsed['chr'] != mito_chrom]['chr'].values)
 
 # When we filter alignments for peak calling, we remove contigs smaller than 'cutoff'. This is meant to be a way to retain only the nuclear chromosomes (not mitochondrial).
