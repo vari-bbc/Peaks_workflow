@@ -784,12 +784,12 @@ rule deeptools_plotenrichment:
 
 rule rm_supplementary_alns:
     """
-    Run samtools view to remove supplementary alignments (no bit set in SAM flag 2048 / -F 2048).
+    Run samtools view to remove supplementary alignments (no bit set in SAM flag 2304 / -F 2304).
     """
     input:
         "analysis/bwamem/{bam_name}.bam"
     output:
-        temp("analysis/rm_supplementary_alns/{bam_name}.F2048.bam")
+        temp("analysis/rm_supplementary_alns/{bam_name}.F2304.bam")
     params:
     log:
         stdout="logs/rm_supplementary_alns/{bam_name}.o",
@@ -803,7 +803,7 @@ rule rm_supplementary_alns:
         mem_gb = 32
     shell:
         """
-        samtools view -@ {threads} -F 2048 -b -o {output} {input}
+        samtools view -@ {threads} -F 2304 -b -o {output} {input}
         """
 
 rule preseq_complexity:
