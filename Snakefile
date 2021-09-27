@@ -35,12 +35,19 @@ chroms_gt_cutoff = ' '.join(fai_parsed[fai_parsed['len'] > chrom_min_bp]['chr'].
 ##### load config and sample sheets #####
 
 units = pd.read_table("bin/samples.tsv")
-samples = units[["sample","control","sample_group"]].drop_duplicates()
+units['se_or_pe'] = ["SE" if x else "PE" for x in units['fq2'].isnull()]
+
+samples = units[["sample","control","sample_group","se_or_pe"]].drop_duplicates()
+if not samples['sample'].is_unique:
+    raise Exception('A sample has more than one combination of control, smaple_group and/or se_or_pe.')
 
 # Filter for sample rows that are not controls
 controls_list = list(itertools.chain.from_iterable( [x.split(',') for x in samples['control'].values if not pd.isnull(x)] ))
 samples_no_controls = samples[-samples['sample'].isin(controls_list)]
 
+# if SE data, make sure it is not ATACseq
+if (config['atacseq'] and units['fq2'].isnull().any()):
+    raise Exception('SE ATAC-seq not supported.')
 
 snakemake_dir = os.getcwd() + "/"
 
@@ -57,16 +64,17 @@ include: os.path.join(shared_snakemake_dir, "post_alignment/CollectAlignmentSumm
 
 rule all:
     input:
-        #expand("analysis/filt_bams/{sample.sample}_filt_alns.bam", sample=samples.itertuples()),
-        #expand("analysis/deeptools_cov_rmdups/{sample.sample}_filt_alns_rmdups.bw", sample=samples.itertuples()),
-        expand("analysis/merge_bigwigs/{group}.bw", group=pd.unique(samples['sample_group'])),
-        "analysis/multiqc/multiqc_report.html",
-        "analysis/deeptools_fingerprint/fingerprint.rawcts",
-        #expand("analysis/peaks_rm_blacklist/{sample}_macs2_{size}_peaks.rm_blacklist.{size}Peak", sample=samples["sample"], size=["narrow","broad"]),
-        #expand("analysis/hmmratac/{sample}_summits.bed", sample=samples["sample"]) if config['atacseq'] else [],
-        expand("analysis/deeptools_plotenrichment/{sample}.pdf", sample=samples_no_controls["sample"]),
-        expand("analysis/filt_bams_nfr/CollectInsertSizeMetrics/{sample.sample}_filt_alns_nfr.insert_size_metrics.txt", sample=samples.itertuples()) if config['atacseq'] else [],
-        "analysis/peaks_venn/report.html",
+        expand("analysis/bwamem/{sample.sample}.bam", sample=samples.itertuples()),
+        ##expand("analysis/filt_bams/{sample.sample}_filt_alns.bam", sample=samples.itertuples()),
+        ##expand("analysis/deeptools_cov_rmdups/{sample.sample}_filt_alns_rmdups.bw", sample=samples.itertuples()),
+        #expand("analysis/merge_bigwigs/{group}.bw", group=pd.unique(samples['sample_group'])),
+        #"analysis/multiqc/multiqc_report.html",
+        #"analysis/deeptools_fingerprint/fingerprint.rawcts",
+        ##expand("analysis/peaks_rm_blacklist/{sample}_macs2_{size}_peaks.rm_blacklist.{size}Peak", sample=samples["sample"], size=["narrow","broad"]),
+        ##expand("analysis/hmmratac/{sample}_summits.bed", sample=samples["sample"]) if config['atacseq'] else [],
+        #expand("analysis/deeptools_plotenrichment/{sample}.pdf", sample=samples_no_controls["sample"]),
+        #expand("analysis/filt_bams_nfr/CollectInsertSizeMetrics/{sample.sample}_filt_alns_nfr.insert_size_metrics.txt", sample=samples.itertuples()) if config['atacseq'] else [],
+        #"analysis/peaks_venn/report.html",
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -181,9 +189,35 @@ rule trim_galore_PE:
         trim_galore --paired {input} --output_dir analysis/trim_galore/ --cores {threads} --fastqc
         """
 
+rule trim_galore_SE:
+    """
+    Run trim_galore on single-end reads.
+    """
+    input:
+        "analysis/renamed_data/{sample}_R1.fastq.gz"
+    output:
+        temp("analysis/trim_galore/{sample}_R1_trimmed.fq.gz"),
+        "analysis/trim_galore/{sample}_R1.fastq.gz_trimming_report.txt",
+        expand("analysis/trim_galore/{{sample}}_R1_trimmed_fastqc{ext}", ext=['.html','.zip']),
+    params:
+    log:
+        stdout="logs/trim_galore/{sample}.o",
+        stderr="logs/trim_galore/{sample}.e"
+    benchmark:
+        "benchmarks/trim_galore/{sample}.txt"
+    envmodules:
+        config['modules']['trim_galore']
+    threads: 4
+    resources:
+        mem_gb = 64
+    shell:
+        """
+        trim_galore {input} --output_dir analysis/trim_galore/ --cores {threads} --fastqc
+        """
+
 rule bwamem:
     input:
-        expand("analysis/trim_galore/{{sample}}_R{read}_val_{read}.fq.gz", read=["1","2"])
+        lambda wildcards: expand("analysis/trim_galore/{sample}_R{read}_val_{read}.fq.gz", read=["1","2"], sample=wildcards.sample) if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "analysis/trim_galore/{sample}_R1_trimmed.fq.gz"
     output:
         outbam="analysis/bwamem/{sample}.bam",
         outbai="analysis/bwamem/{sample}.bam.bai",
@@ -195,6 +229,7 @@ rule bwamem:
         "benchmarks/bwamem/{sample}.txt"
     params:
         bwa_idx=bwa_index,
+        samblaster_params=lambda wildcards: "--addMateTags" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else ""
     threads: 16
     envmodules:
         config['modules']['bwa'],
@@ -208,7 +243,7 @@ rule bwamem:
         -t {threads} \
         {params.bwa_idx} \
         {input} | \
-        samblaster --addMateTags | \
+        samblaster {params.samblaster_params} | \
         samtools sort \
         -m 6G \
         -@ {threads} \
