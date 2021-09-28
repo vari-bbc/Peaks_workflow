@@ -758,6 +758,8 @@ rule deeptools_plotenrichment:
     params:
         blacklist=blacklist,
         temp=tmp_dir,
+        extend_reads=lambda wildcards: "--extendReads" if all(x == "PE" for x in samples['se_or_pe'].values) else "", # extend to frag size if all samples are PE
+        sam_keep=lambda wildcards: "--samFlagInclude 64" if all(x == "PE" for x in samples['se_or_pe'].values) else "", # count only first in pair if all samples are PE
         #sam_keep="64",
         #sam_exclude="1024",    
     threads: 16
@@ -777,6 +779,8 @@ rule deeptools_plotenrichment:
         --variableScales \
         --outRawCounts {output.rawcts} \
         --blackListFileName {params.blacklist} \
+        {params.extend_reads} \
+        {params.sam_keep} \
         -p {threads} \
         -o {output.plot} 
 
