@@ -1,6 +1,6 @@
 # Peaks Workflow
 
-This workflow is designed to align. perform basic QC and call peaks for peak-based methods such as ChIP-seq, CUT&RUN and ATAC-seq.
+This workflow is designed to align, perform basic QC and call peaks for peak-based methods such as ChIP-seq, CUT&RUN and ATAC-seq.
 
 # Usage
 1. `git clone <repo> <new_directory_name>`
@@ -17,6 +17,6 @@ This workflow is designed to align. perform basic QC and call peaks for peak-bas
    
    iii. `fq1` -- R1 file
     
-    iv. `fq2` -- R2 file
+    iv. `fq2` -- R2 file; fill in with NA if SE data.
 
 5. From the root directory of the project, run `qsub bin/run_snakemake.sh`.
