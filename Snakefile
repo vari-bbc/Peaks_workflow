@@ -64,17 +64,17 @@ include: os.path.join(shared_snakemake_dir, "post_alignment/CollectAlignmentSumm
 
 rule all:
     input:
-        expand("analysis/bwamem/{sample.sample}.bam", sample=samples.itertuples()),
-        ##expand("analysis/filt_bams/{sample.sample}_filt_alns.bam", sample=samples.itertuples()),
-        ##expand("analysis/deeptools_cov_rmdups/{sample.sample}_filt_alns_rmdups.bw", sample=samples.itertuples()),
-        #expand("analysis/merge_bigwigs/{group}.bw", group=pd.unique(samples['sample_group'])),
-        #"analysis/multiqc/multiqc_report.html",
-        #"analysis/deeptools_fingerprint/fingerprint.rawcts",
-        ##expand("analysis/peaks_rm_blacklist/{sample}_macs2_{size}_peaks.rm_blacklist.{size}Peak", sample=samples["sample"], size=["narrow","broad"]),
-        ##expand("analysis/hmmratac/{sample}_summits.bed", sample=samples["sample"]) if config['atacseq'] else [],
-        #expand("analysis/deeptools_plotenrichment/{sample}.pdf", sample=samples_no_controls["sample"]),
-        #expand("analysis/filt_bams_nfr/CollectInsertSizeMetrics/{sample.sample}_filt_alns_nfr.insert_size_metrics.txt", sample=samples.itertuples()) if config['atacseq'] else [],
-        #"analysis/peaks_venn/report.html",
+        #expand("analysis/bwamem/{sample.sample}.bam", sample=samples.itertuples()),
+        #expand("analysis/filt_bams/{sample.sample}_filt_alns.bam", sample=samples.itertuples()),
+        #expand("analysis/deeptools_cov_rmdups/{sample.sample}_filt_alns_rmdups.bw", sample=samples.itertuples()),
+        expand("analysis/merge_bigwigs/{group}.bw", group=pd.unique(samples['sample_group'])),
+        "analysis/multiqc/multiqc_report.html",
+        "analysis/deeptools_fingerprint/fingerprint.rawcts",
+        #expand("analysis/peaks_rm_blacklist/{sample}_macs2_{size}_peaks.rm_blacklist.{size}Peak", sample=samples["sample"], size=["narrow","broad"]),
+        #expand("analysis/hmmratac/{sample}_summits.bed", sample=samples["sample"]) if config['atacseq'] else [],
+        expand("analysis/deeptools_plotenrichment/{sample}.pdf", sample=samples_no_controls["sample"]),
+        expand("analysis/filt_bams_nfr/CollectInsertSizeMetrics/{sample.sample}_filt_alns_nfr.insert_size_metrics.txt", sample=samples.itertuples()) if config['atacseq'] else [],
+        ##"analysis/peaks_venn/report.html",
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -221,7 +221,8 @@ rule bwamem:
     output:
         outbam="analysis/bwamem/{sample}.bam",
         outbai="analysis/bwamem/{sample}.bam.bai",
-        idxstat="analysis/bwamem/{sample}.bam.idxstat"
+        idxstat="analysis/bwamem/{sample}.bam.idxstat",
+        samblaster_err="analysis/bwamem/{sample}.samblaster.e",
     log:
         stdout="logs/bwamem/{sample}.o",
         stderr="logs/bwamem/{sample}.e",
@@ -229,7 +230,7 @@ rule bwamem:
         "benchmarks/bwamem/{sample}.txt"
     params:
         bwa_idx=bwa_index,
-        samblaster_params=lambda wildcards: "--addMateTags" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else ""
+        samblaster_params=lambda wildcards: "--addMateTags" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "--ignoreUnmated"
     threads: 16
     envmodules:
         config['modules']['bwa'],
@@ -243,7 +244,7 @@ rule bwamem:
         -t {threads} \
         {params.bwa_idx} \
         {input} | \
-        samblaster {params.samblaster_params} | \
+        samblaster {params.samblaster_params} 2>{output.samblaster_err} | \
         samtools sort \
         -m 6G \
         -@ {threads} \
@@ -284,7 +285,7 @@ rule filt_bams:
     params:
         mapq=30,
         flags_to_exclude="780",
-        flags_to_include="2",
+        flags_to_include=lambda wildcards: "-f 2" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "",
         keep_chroms = chroms_no_mito #chroms_gt_cutoff #chroms_no_mito if atacseq else ''
     threads: 8
     resources:
@@ -297,7 +298,7 @@ rule filt_bams:
               -@ {threads} \
               -q {params.mapq} \
               -F {params.flags_to_exclude} \
-              -f {params.flags_to_include} \
+              {params.flags_to_include} \
               -b -o {output.bam} {input} {params.keep_chroms}
 
         samtools index {output.bam}
@@ -343,46 +344,6 @@ rule filt_bams_nfr:
         """
 
 
-rule deeptools_cov_keepdups:
-    input:
-        bam="analysis/filt_bams/{sample}_filt_alns.bam"
-    output:
-        bigwig_keepdups="analysis/deeptools_cov_keepdups/{sample}_filt_alns_keepdups.bw"
-    log:
-        stdout="logs/deeptools_cov_keepdups/{sample}.o",
-        stderr="logs/deeptools_cov_keepdups/{sample}.e"
-    benchmark:
-        "benchmarks/deeptools_cov_keepdups/{sample}.txt"
-    params:
-        blacklist=blacklist,
-        binsize=bamCoverage_binsize,
-        norm_method="CPM",
-        sam_keep="64",
-        temp=os.path.join(snakemake_dir, "tmp")
-    threads: 16
-    envmodules:
-        config['modules']['deeptools']
-    resources:
-        mem_gb=96
-    shell:
-        """
-        export TMPDIR={params.temp}
-        
-        # calculate the coverage
-        ## Since this is PE data, we can use '--extendReads' to extend the reads to connect the two mates.
-        bamCoverage \
-        -p {threads} \
-        --binSize {params.binsize} \
-        --bam {input.bam} \
-        --extendReads \
-        --blackListFileName {params.blacklist} \
-        -o {output.bigwig_keepdups} \
-        --binSize {params.binsize} \
-        --normalizeUsing {params.norm_method} \
-        --samFlagInclude {params.sam_keep}
-
-        """
-
 rule deeptools_cov_rmdups:
     input:
         bam="analysis/filt_bams/{sample}_filt_alns.bam"
@@ -397,8 +358,9 @@ rule deeptools_cov_rmdups:
         blacklist=blacklist,
         binsize=bamCoverage_binsize,
         norm_method="CPM",
-        sam_keep="64",
+        sam_keep=lambda wildcards: "--samFlagInclude 64" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "", # count only first in pair if PE
         sam_exclude="1024",
+        extend_reads=lambda wildcards: "--extendReads" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "", # extend to frag size if PE
         temp=os.path.join(snakemake_dir, "tmp")
     threads: 16
     envmodules:
@@ -409,19 +371,17 @@ rule deeptools_cov_rmdups:
         """
         export TMPDIR={params.temp}
         
-        # calculate the coverage
-        ## Since this is PE data, we can use '--extendReads' to extend the reads to connect the two mates.
         bamCoverage \
         -p {threads} \
         --binSize {params.binsize} \
         --bam {input.bam} \
-        --extendReads \
+        {params.extend_reads} \
         --blackListFileName {params.blacklist} \
         -o {output.bigwig_rmdups} \
         --binSize {params.binsize} \
         --normalizeUsing {params.norm_method} \
-        --samFlagInclude {params.sam_keep} \
-         --samFlagExclude {params.sam_exclude}
+        --samFlagExclude {params.sam_exclude} \
+        {params.sam_keep}
 
         """
 
@@ -504,7 +464,9 @@ rule deeptools_fingerprint:
     params:
         labels=' '.join(samples["sample"].values),
         blacklist=blacklist,
-        sam_keep="64",
+        #sam_keep="64",
+        extend_reads=lambda wildcards: "--extendReads" if all(x == "PE" for x in samples['se_or_pe'].values) else "", # extend to frag size if all samples are PE
+        sam_keep=lambda wildcards: "--samFlagInclude 64" if all(x == "PE" for x in samples['se_or_pe'].values) else "", # count only first in pair if all samples are PE
         temp=tmp_dir
     threads: 16
     envmodules:
@@ -520,10 +482,9 @@ rule deeptools_fingerprint:
         -p {threads} \
         -o {output.plot} \
         --outRawCounts {output.rawcts} \
-        --extendReads \
-        --minMappingQuality 20 \
+        {params.extend_reads} \
         --labels {params.labels} \
-        --samFlagInclude {params.sam_keep} \
+        {params.sam_keep} \
         --blackListFileName {params.blacklist}
 
         """
@@ -563,6 +524,7 @@ rule macs2:
         broad_name="{sample}_macs2_broad",
         narrow_name="{sample}_macs2_narrow",
         outdir="analysis/{macs2_type}/",
+        macs2_format=lambda wildcards: "-f BAMPE" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "",
         temp_dir="tmp/"
     envmodules:
         config['modules']['macs2']
@@ -575,7 +537,7 @@ rule macs2:
         callpeak \
         -t {input.trt} \
         {params.control_param} \
-        -f BAMPE \
+        {params.macs2_format} \
         --outdir {params.outdir} \
         -n {params.broad_name} \
         -g {params.species} \
@@ -591,7 +553,7 @@ rule macs2:
         callpeak \
         -t {input.trt} \
         {params.control_param} \
-        -f BAMPE \
+        {params.macs2_format} \
         --outdir {params.outdir} \
         -n {params.narrow_name} \
         -g {params.species} \
@@ -796,7 +758,7 @@ rule deeptools_plotenrichment:
     params:
         blacklist=blacklist,
         temp=tmp_dir,
-        sam_keep="64",
+        #sam_keep="64",
         #sam_exclude="1024",    
     threads: 16
     envmodules:
@@ -814,7 +776,6 @@ rule deeptools_plotenrichment:
         --smartLabels \
         --variableScales \
         --outRawCounts {output.rawcts} \
-        --samFlagInclude {params.sam_keep} \
         --blackListFileName {params.blacklist} \
         -p {threads} \
         -o {output.plot} 
@@ -862,6 +823,7 @@ rule preseq_complexity:
     envmodules:
         config['modules']['preseq']
     params:
+        paired=lambda wildcards: "-P" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "",
     resources:
         mem_gb=100
     threads: 8
@@ -871,7 +833,7 @@ rule preseq_complexity:
 
         preseq c_curve \
         -v \
-        -P \
+        {params.paired} \
         -bam \
         -o {output.ccurve} \
         {input}
@@ -881,7 +843,7 @@ rule preseq_complexity:
 
         preseq lc_extrap \
         -v \
-        -P \
+        {params.paired} \
         -bam \
         -o {output.lcextrap} \
         {input}
@@ -894,17 +856,18 @@ rule preseq_complexity:
 
 rule multiqc:
     input:
-        expand("analysis/fastqc/{sample.sample}_R{read}_fastqc.html", sample=samples.itertuples(), read=["1","2"]),
-        expand("analysis/trim_galore/{sample.sample}_R{read}_val_{read}_fastqc.html", sample=samples.itertuples(), read=["1","2"]),
+        expand("analysis/fastqc/{sample.sample}_R1_fastqc.html", sample=samples.itertuples()),
+        expand("analysis/fastqc/{sample.sample}_R2_fastqc.html", sample=samples[samples['se_or_pe']=="PE"].itertuples()),
+        expand("analysis/trim_galore/{sample.sample}_R{read}_val_{read}_fastqc.html", sample=samples[samples['se_or_pe']=="PE"].itertuples(), read=["1","2"]),
+        expand("analysis/trim_galore/{sample.sample}_R1_trimmed_fastqc.html", sample=samples[samples['se_or_pe']=="SE"].itertuples()),
         expand("analysis/preseq_complexity/{sample.sample}.c_curve.txt", sample=samples.itertuples()),
         expand("analysis/preseq_complexity/{sample.sample}.lc_extrap.txt", sample=samples.itertuples()),
-        #expand("analysis/fastp/{sample.sample}_fastp.html", sample=samples.itertuples()),
         expand("analysis/bwamem/flagstat/{sample.sample}.flagstat", sample=samples.itertuples()),
         expand("analysis/filt_bams/{sample.sample}_filt_alns.bam.idxstat", sample=samples.itertuples()),
-        expand("analysis/filt_bams/CollectInsertSizeMetrics/{sample.sample}_filt_alns.insert_size_metrics.txt", sample=samples.itertuples()),
+        expand("analysis/filt_bams/CollectInsertSizeMetrics/{sample.sample}_filt_alns.insert_size_metrics.txt", sample=samples[samples['se_or_pe']=="PE"].itertuples()),
         expand("analysis/bwamem/CollectAlignmentSummaryMetrics/{sample.sample}.aln_metrics.txt", sample=samples.itertuples()),
-        #expand("analysis/align/{sample.sample}_vs_mm10.bam.flagstat", sample=samples.itertuples()),
-        expand("analysis/fastq_screen/{sample.sample}_R{read}_screen.html", sample=samples.itertuples(), read=["1","2"]),
+        expand("analysis/fastq_screen/{sample.sample}_R1_screen.html", sample=samples.itertuples()),
+        expand("analysis/fastq_screen/{sample.sample}_R2_screen.html", sample=samples[samples['se_or_pe']=="PE"].itertuples()),
         expand("analysis/deeptools_plotenrichment/{sample.sample}.rawcts", sample=samples_no_controls.itertuples()),
     output:
         "analysis/multiqc/multiqc_report.html",
@@ -923,8 +886,8 @@ rule multiqc:
         "analysis/fastq_screen/",
         "analysis/bwamem/CollectAlignmentSummaryMetrics/",
         "analysis/filt_bams/",
-        "analysis/filt_bams/CollectInsertSizeMetrics/",
         "analysis/deeptools_plotenrichment/"],
+        PE_dirs=["analysis/filt_bams/CollectInsertSizeMetrics/"] if not all(x == "SE" for x in samples['se_or_pe'].values)  else [],
         outfile="multiqc_report"
     envmodules:
         config['modules']['multiqc']
@@ -937,7 +900,7 @@ rule multiqc:
         --force \
         --outdir {params.workdir} \
         --filename {params.outfile} \
-        {params.dirs}
+        {params.dirs} {params.PE_dirs}
 
         """
 
