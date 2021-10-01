@@ -6,16 +6,16 @@ library(optparse)
 
 option_list <- list(
   make_option(c("-f", "--fq_dir"), type="character", default="../raw_data/", 
-              help="Directory containing fastqs.", metavar="character"),
+              help="Directory containing fastqs. [default = %default]", metavar="character"),
   make_option(c("--se"), action="store_true", default=FALSE,
               help="Set if single-end reads."),
   make_option(c("-s", "--sample_rgx"), type="character", default="^[^_]+", 
-              help="Regex to extract sample name.", metavar="character"),
+              help="Regex to extract sample name. [default = %default]", metavar="character"),
   make_option(c("-r", "--r1_rgx"), type="character", default="_R1_", 
-              help="R1 plus leading and trailing characters.", metavar="character"),
+              help="R1 plus leading and trailing characters. [default = %default]", metavar="character"),
   make_option(c("-o", "--out"), type="character", default="samples_template.tsv", 
-              help="output file name [default= %default]", metavar="character")
-); 
+              help="output file name [default = %default]", metavar="character")
+) 
  
 opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
@@ -23,11 +23,10 @@ opt <- parse_args(opt_parser)
 
 r1_files <- list.files(opt$fq_dir, pattern=opt$r1_rgx)
 
-r2_rgx <- str_replace(opt$r1_rgx, "R1", "R2")
-r2_files <- list.files(opt$fq_dir, pattern=r2_rgx)
-
-
 if(!opt$se){
+    r2_rgx <- str_replace(opt$r1_rgx, "1", "2")
+    r2_files <- list.files(opt$fq_dir, pattern=r2_rgx)
+
     if (length(r2_files) == 0){
         stop("No R2 files found. Please set --se if single end reads.")
     }
@@ -35,11 +34,13 @@ if(!opt$se){
         stop("Number of R1 and R2 files not the same. Doublecheck raw data directory.")
     }
     # if paired end data, R1 and R2 files names should be identical after removing R1/R2 portion of the name.
-    stopifnot(identical(str_remove(r1_files, opt$R1_rgx), str_remove(r2_files, r2_rgx)))
+    stopifnot(identical(str_remove(r1_files, opt$r1_rgx), str_remove(r2_files, r2_rgx)))
+} else{
+    r2_files <- NA
 }
 
 df <- tibble(fq1=r1_files) %>%
     dplyr::mutate(sample=str_extract(fq1, opt$sample_rgx), control=NA, sample_group=sample,
-                  fq2=ifelse(opt$se, NA, r2_files)) %>%
+                  fq2=r2_files) %>%
     dplyr::select(sample, control, fq1, fq2, sample_group) %>%
     write_tsv(., opt$out)
