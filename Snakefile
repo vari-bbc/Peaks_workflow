@@ -76,6 +76,7 @@ rule all:
         expand("analysis/deeptools_bamcompare/{sample}_vs_control_log2ratio.bw", sample=samples_no_controls[pd.notnull(samples_no_controls['control'])]["sample"]),
         expand("analysis/filt_bams_nfr/CollectInsertSizeMetrics/{sample.sample}_filt_alns_nfr.insert_size_metrics.txt", sample=samples.itertuples()) if config['atacseq'] else [],
         "analysis/peaks_venn/report.html",
+        "analysis/deeptools_heatmap_genes/genes.pdf",
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -489,6 +490,66 @@ rule merge_bigwigs:
     shell:
         """
         {params}
+        """
+
+rule deeptools_heatmap_genes:
+    input:
+        bw=lambda wildcards: expand("analysis/merge_bigwigs/{sample_group}.bw", sample_group=pd.unique(samples["sample_group"])),
+        genes=config['gtf_for_tss_heatmap'],
+    output:
+        compmat="analysis/deeptools_heatmap_genes/compmat.gz",
+        compmatbed="analysis/deeptools_heatmap_genes/compmat.bed",
+        heatmap="analysis/deeptools_heatmap_genes/genes.pdf"
+    log:
+        stdout="logs/deeptools_heatmap_genes/out.o",
+        stderr="logs/deeptools_heatmap_genes/err.e"
+    benchmark:
+        "benchmarks/deeptools_heatmap_genes/bench.txt"
+    envmodules:
+        "bbc/deeptools/deeptools-3.5.1"
+    params:
+        after="2000",
+        before="2000",
+        binsize=bamCoverage_binsize,
+        samp_labels=lambda wildcards, input: " ".join(os.path.basename(x).replace(".bw", "") for x in input.bw),
+        temp="analysis/deeptools_heatmap_genes/ht_tmp",
+        yaxislabel='"Sum CPMs"',
+        blacklist=blacklist,
+    threads: 16
+    resources:
+        mem_gb=100
+    shell:
+        """
+        export TMPDIR={params.temp}
+
+        computeMatrix \
+        scale-regions \
+        -p {threads} \
+        -b {params.before} \
+        -a {params.after} \
+        --missingDataAsZero \
+        --samplesLabel {params.samp_labels} \
+        --binSize {params.binsize} \
+        -R {input.genes} \
+        -S {input.bw} \
+        -o {output.compmat} \
+        -bl {params.blacklist} \
+        --transcriptID gene \
+        --transcript_id_designator gene_id \
+        --outFileSortedRegions {output.compmatbed}
+
+        echo "END computeMatrix"
+        echo "END computeMatrix" 1>&2
+
+        plotHeatmap \
+        --heatmapWidth 6 \
+        --yAxisLabel {params.yaxislabel} \
+        -m {output.compmat} \
+        -out {output.heatmap} \
+
+        echo "END plotHeatmap"
+        echo "END plotHeatmap" 1>&2
+
         """
 
 rule deeptools_fingerprint:
