@@ -74,7 +74,7 @@ rule all:
         #expand("analysis/hmmratac/{sample}_summits.bed", sample=samples["sample"]) if config['atacseq'] else [],
         expand("analysis/deeptools_plotenrichment/{sample}.pdf", sample=samples_no_controls["sample"]),
         expand("analysis/filt_bams_nfr/CollectInsertSizeMetrics/{sample.sample}_filt_alns_nfr.insert_size_metrics.txt", sample=samples.itertuples()) if config['atacseq'] else [],
-        ##"analysis/peaks_venn/report.html",
+        "analysis/peaks_venn/report.html",
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
