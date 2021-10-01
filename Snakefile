@@ -29,8 +29,8 @@ if mito_chrom not in fai_parsed['chr'].values:
 chroms_no_mito = ' '.join(fai_parsed[fai_parsed['chr'] != mito_chrom]['chr'].values)
 
 # When we filter alignments for peak calling, we remove contigs smaller than 'cutoff'. This is meant to be a way to retain only the nuclear chromosomes (not mitochondrial).
-chrom_min_bp = config['ref']['chrom_min_bp']
-chroms_gt_cutoff = ' '.join(fai_parsed[fai_parsed['len'] > chrom_min_bp]['chr'].values)
+#chrom_min_bp = config['ref']['chrom_min_bp']
+#chroms_gt_cutoff = ' '.join(fai_parsed[fai_parsed['len'] > chrom_min_bp]['chr'].values)
 
 ##### load config and sample sheets #####
 

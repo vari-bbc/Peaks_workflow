@@ -14,7 +14,7 @@ ref:
   #keep_chroms:    chr1 chr2 chr3 chr4 chr5 chr6 chr7 chr8 chr9 chr10 chr11 chr12 chr13 chr14 chr15 chr16 chr17 chr18 chr19 chrX chrY
   mito_chr: chrM
   # When we filter alignments for peak calling, we remove contigs smaller than 'cutoff'. This is meant to be a way to retain only the nuclear chromosomes (not mitochondrial). Make sure that this value is not larger than any of the chromosomal contigs in your genome.
-  chrom_min_bp: 5000000
+  #chrom_min_bp: 5000000
 
 atacseq: false
 run_hmmratac: true # Does not matter unless atacseq==true. This option provided because HMMRATAC seems to have issues with low-pass/pilot sequencing data.
