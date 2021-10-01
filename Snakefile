@@ -462,7 +462,7 @@ rule deeptools_fingerprint:
     benchmark:
         "benchmarks/deeptools_fingerprint/combined.txt"
     params:
-        labels=' '.join(samples["sample"].values),
+        labels=lambda wildcards, input: ' '.join([os.path.basename(x).replace("_filt_alns.bam","") for x in input]),
         blacklist=blacklist,
         #sam_keep="64",
         extend_reads=lambda wildcards: "--extendReads" if all(x == "PE" for x in samples['se_or_pe'].values) else "", # extend to frag size if all samples are PE
