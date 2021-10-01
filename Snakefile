@@ -73,6 +73,7 @@ rule all:
         #expand("analysis/peaks_rm_blacklist/{sample}_macs2_{size}_peaks.rm_blacklist.{size}Peak", sample=samples["sample"], size=["narrow","broad"]),
         #expand("analysis/hmmratac/{sample}_summits.bed", sample=samples["sample"]) if config['atacseq'] else [],
         expand("analysis/deeptools_plotenrichment/{sample}.pdf", sample=samples_no_controls["sample"]),
+        expand("analysis/deeptools_bamcompare/{sample}_vs_control_log2ratio.bw", sample=samples_no_controls[pd.notnull(samples_no_controls['control'])]["sample"]),
         expand("analysis/filt_bams_nfr/CollectInsertSizeMetrics/{sample.sample}_filt_alns_nfr.insert_size_metrics.txt", sample=samples.itertuples()) if config['atacseq'] else [],
         "analysis/peaks_venn/report.html",
 
@@ -382,6 +383,46 @@ rule deeptools_cov_rmdups:
         --normalizeUsing {params.norm_method} \
         --samFlagExclude {params.sam_exclude} \
         {params.sam_keep}
+
+        """
+
+rule deeptools_bamcompare:
+    input:
+        bam1="analysis/filt_bams/{sample}_filt_alns.bam",
+        bam2=lambda wildcards: "analysis/filt_bams/{control}_filt_alns.bam".format(control=samples[samples['sample']==wildcards.sample]['control'].values[0]),
+    output:
+        bigwig="analysis/deeptools_bamcompare/{sample}_vs_control_log2ratio.bw"
+    log:
+        stdout="logs/deeptools_bamcompare/{sample}.o",
+        stderr="logs/deeptools_bamcompare/{sample}.e"
+    benchmark:
+        "benchmarks/deeptools_bamcompare/{sample}.txt"
+    params:
+        blacklist=blacklist,
+        binsize=bamCoverage_binsize,
+        norm_method="CPM",
+        sam_keep=lambda wildcards: "--samFlagInclude 64" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "", # count only first in pair if PE
+        sam_exclude="1024",
+        extend_reads=lambda wildcards: "--extendReads" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "", # extend to frag size if PE
+        temp=os.path.join(snakemake_dir, "tmp")
+    threads: 16
+    envmodules:
+        config['modules']['deeptools']
+    resources:
+        mem_gb=96
+    shell:
+        """
+        export TMPDIR={params.temp}
+       
+        bamCompare -b1 {input.bam1} -b2 {input.bam2} \
+                -p {threads} \
+                {params.extend_reads} \
+                --binSize {params.binsize} \
+                --normalizeUsing {params.norm_method} \
+                --blackListFileName {params.blacklist} \
+                --samFlagExclude {params.sam_exclude} \
+                {params.sam_keep} \
+                -o {output.bigwig}
 
         """
 
