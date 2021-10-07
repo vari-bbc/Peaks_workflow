@@ -254,18 +254,18 @@ rule bwamem:
         -o {output.outbam} \
         -
 
-        echo "END bwamem" >> {log.stdout}
-        echo "END bwamem" >> {log.stderr}
+        echo "END bwamem"
+        echo "END bwamem" 1>&2
 
         samtools index -@ {threads} {output.outbam}
 
-        echo "END indexing" >> {log.stdout}
-        echo "END indexing" >> {log.stderr}
+        echo "END indexing"
+        echo "END indexing" 1>&2
         
         samtools idxstats {output.outbam} > {output.idxstat}
 
-        echo "END idxstats" >> {log.stdout}
-        echo "END idxstats" >> {log.stderr}
+        echo "END idxstats"
+        echo "END idxstats" 1>&2
  
         """
 
@@ -646,8 +646,8 @@ rule macs2:
         --keep-dup 1 \
         --tempdir {params.temp_dir} 
 
-        echo "END broad peak calling" >> {log.stdout}
-        echo "END broad peak calling" >> {log.stderr}
+        echo "END broad peak calling" 1>&2
+        echo "END broad peak calling"
 
         macs2 \
         callpeak \
@@ -661,8 +661,8 @@ rule macs2:
         --keep-dup 1 \
         --tempdir {params.temp_dir} 
 
-        echo "END narrow peak calling" >> {log.stdout}
-        echo "END narrow peak calling" >> {log.stderr}
+        echo "END narrow peak calling" 1>&2
+        echo "END narrow peak calling"
         
         """
 
@@ -750,7 +750,7 @@ rule merge_all_peaks:
         mem_gb=100
     shell:
         """
-        bedops --merge {input} 1> {output} 2> {log.stderr}
+        bedops --merge {input} 1> {output}
         """
 
 
