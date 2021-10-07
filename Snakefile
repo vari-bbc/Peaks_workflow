@@ -401,7 +401,6 @@ rule deeptools_bamcompare:
     params:
         blacklist=blacklist,
         binsize=bamCoverage_binsize,
-        norm_method="CPM",
         sam_keep=lambda wildcards: "--samFlagInclude 64" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "", # count only first in pair if PE
         sam_exclude="1024",
         extend_reads=lambda wildcards: "--extendReads" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "", # extend to frag size if PE
@@ -419,7 +418,6 @@ rule deeptools_bamcompare:
                 -p {threads} \
                 {params.extend_reads} \
                 --binSize {params.binsize} \
-                --normalizeUsing {params.norm_method} \
                 --blackListFileName {params.blacklist} \
                 --samFlagExclude {params.sam_exclude} \
                 {params.sam_keep} \
