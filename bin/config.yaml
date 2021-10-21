@@ -16,8 +16,8 @@ ref:
   # When we filter alignments for peak calling, we remove contigs smaller than 'cutoff'. This is meant to be a way to retain only the nuclear chromosomes (not mitochondrial). Make sure that this value is not larger than any of the chromosomal contigs in your genome.
   #chrom_min_bp: 5000000
 
-atacseq: false
-run_hmmratac: true # Does not matter unless atacseq==true. This option provided because HMMRATAC seems to have issues with low-pass/pilot sequencing data.
+atacseq: true
+run_hmmratac: false # Does not matter unless atacseq==true. This option provided because HMMRATAC seems to have issues with low-pass/pilot sequencing data.
   #peakset_for_FRiP: 'narrow'
 
 macs2:
@@ -26,6 +26,9 @@ macs2:
 gtf_for_tss_heatmap: /varidata/research/projects/bbc/versioned_references/2021-08-10_11.12.27_v6/data/mm10_gencode/annotation/mm10_gencode.basic.gtf
 
 shared_snakemake_repo: "/secondary/projects/bbc/research/shared_snakemake/"
+
+atacseqc:
+    known_genes_pkg: TxDb.Mmusculus.UCSC.mm10.knownGene
 
 modules:
   bamtools: bbc/bamtools/bamtools-2.5.1

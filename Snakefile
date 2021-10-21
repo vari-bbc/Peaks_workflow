@@ -34,7 +34,7 @@ chroms_no_mito = ' '.join(fai_parsed[fai_parsed['chr'] != mito_chrom]['chr'].val
 
 ##### load config and sample sheets #####
 
-units = pd.read_table("bin/samples.tsv")
+units = pd.read_table("bin/samples.tsv", dtype={"sample" : str, "sample_group" : str })
 units['se_or_pe'] = ["SE" if x else "PE" for x in units['fq2'].isnull()]
 
 samples = units[["sample","control","sample_group","se_or_pe"]].drop_duplicates()
@@ -77,6 +77,8 @@ rule all:
         expand("analysis/filt_bams_nfr/CollectInsertSizeMetrics/{sample.sample}_filt_alns_nfr.insert_size_metrics.txt", sample=samples.itertuples()) if config['atacseq'] else [],
         "analysis/peaks_venn/report.html",
         "analysis/deeptools_heatmap_genes/genes.pdf",
+        expand("analysis/atacseqc/{sample}{suffix}", sample=samples_no_controls["sample"], suffix=["_tsse.rds","_tsse.pdf"]) if config['atacseq'] else [],
+        "analysis/deeptools_plotCorr/corr_ht.pdf"
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -269,6 +271,30 @@ rule bwamem:
  
         """
 
+rule atacseqc:
+    input:
+        bam="analysis/bwamem/{sample}.bam"
+    output:
+        expand("analysis/atacseqc/{{sample}}{suffix}", suffix=["_tsse.rds","_tsse.pdf"]),
+    log:
+        stdout="logs/atacseqc/{sample}.o",
+        stderr="logs/atacseqc/{sample}.e",
+    benchmark:
+        "benchmarks/atacseqc/{sample}.txt"
+    params:
+        outpref="analysis/atacseqc/{sample}",
+        knownGenesLib=config["atacseqc"]["known_genes_pkg"]
+    threads: 4
+    envmodules:
+        "bbc/R/R-4.1.0-setR_LIBS_USER"
+    resources:
+        mem_gb=96
+    shell:
+        """
+        Rscript --vanilla bin/atacseqqc.R {input.bam} {params.outpref} {params.knownGenesLib}
+        """
+
+
 rule filt_bams:
     """
     Filter for mapq score, properly paired, primary alignment, remove unmapped. Do not remove dup reads.
@@ -384,6 +410,56 @@ rule deeptools_cov_rmdups:
         --normalizeUsing {params.norm_method} \
         --samFlagExclude {params.sam_exclude} \
         {params.sam_keep}
+
+        """
+
+rule deeptools_multiBWsummary:
+    input:
+        expand("analysis/deeptools_cov_rmdups/{sample}_filt_alns_rmdups.bw", sample=samples['sample'].values)
+    output:
+        "analysis/deeptools_multiBWsummary/results.npz"
+    log:
+        stdout="logs/deeptools_multiBWsummary/out.o",
+        stderr="logs/deeptools_multiBWsummary/err.e"
+    benchmark:
+        "benchmarks/deeptools_multiBWsummary/bench.txt"
+    params:
+        temp=os.path.join(snakemake_dir, "tmp")
+    threads: 8
+    envmodules:
+        config['modules']['deeptools']
+    resources:
+        mem_gb=96
+    shell:
+        """
+        export TMPDIR={params.temp}
+       
+        multiBigwigSummary bins -p {threads} -b {input} -o {output}
+
+        """
+
+rule deeptools_plotCorr:
+    input:
+        "analysis/deeptools_multiBWsummary/results.npz"
+    output:
+        pdf="analysis/deeptools_plotCorr/corr_ht.pdf"
+    log:
+        stdout="logs/deeptools_plotCorr/out.o",
+        stderr="logs/deeptools_plotCorr/err.e"
+    benchmark:
+        "benchmarks/deeptools_plotCorr/bench.txt"
+    params:
+        temp=os.path.join(snakemake_dir, "tmp")
+    threads: 1
+    envmodules:
+        config['modules']['deeptools']
+    resources:
+        mem_gb=64
+    shell:
+        """
+        export TMPDIR={params.temp}
+
+        plotCorrelation -c spearman -p heatmap --skipZeros -o {output.pdf}
 
         """
 
