@@ -504,7 +504,7 @@ rule deeptools_heatmap_genes:
     benchmark:
         "benchmarks/deeptools_heatmap_genes/bench.txt"
     envmodules:
-        "bbc/deeptools/deeptools-3.5.1"
+        config['modules']['deeptools']
     params:
         after="2000",
         before="2000",
@@ -566,6 +566,7 @@ rule deeptools_fingerprint:
         blacklist=blacklist,
         #sam_keep="64",
         extend_reads=lambda wildcards: "--extendReads" if all(x == "PE" for x in samples['se_or_pe'].values) else "", # extend to frag size if all samples are PE
+        sam_exclude="1024",
         sam_keep=lambda wildcards: "--samFlagInclude 64" if all(x == "PE" for x in samples['se_or_pe'].values) else "", # count only first in pair if all samples are PE
         temp=tmp_dir
     threads: 16
@@ -584,6 +585,7 @@ rule deeptools_fingerprint:
         --outRawCounts {output.rawcts} \
         {params.extend_reads} \
         --labels {params.labels} \
+        --samFlagExclude {params.sam_exclude} \
         {params.sam_keep} \
         --blackListFileName {params.blacklist}
 
@@ -860,8 +862,8 @@ rule deeptools_plotenrichment:
         temp=tmp_dir,
         extend_reads=lambda wildcards: "--extendReads" if all(x == "PE" for x in samples['se_or_pe'].values) else "", # extend to frag size if all samples are PE
         sam_keep=lambda wildcards: "--samFlagInclude 64" if all(x == "PE" for x in samples['se_or_pe'].values) else "", # count only first in pair if all samples are PE
+        sam_exclude="1024",    
         #sam_keep="64",
-        #sam_exclude="1024",    
     threads: 16
     envmodules:
         config['modules']['bedops'],
@@ -880,6 +882,7 @@ rule deeptools_plotenrichment:
         --outRawCounts {output.rawcts} \
         --blackListFileName {params.blacklist} \
         {params.extend_reads} \
+        --samFlagExclude {params.sam_exclude} \
         {params.sam_keep} \
         -p {threads} \
         -o {output.plot} 
