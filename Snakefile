@@ -78,7 +78,8 @@ rule all:
         "analysis/peaks_venn/report.html",
         "analysis/deeptools_heatmap_genes/genes.pdf",
         expand("analysis/atacseqc/{sample}{suffix}", sample=samples_no_controls["sample"], suffix=["_tsse.rds","_tsse.pdf"]) if config['atacseq'] else [],
-        "analysis/deeptools_plotCorr/corr_ht.pdf"
+        "analysis/deeptools_plotCorr/corr_ht.pdf",
+        "analysis/deeptools_plotPCA/pca.pdf"
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -463,6 +464,30 @@ rule deeptools_plotCorr:
 
         plotCorrelation --corData {input} -c spearman -p heatmap --skipZeros -o {output.pdf}
 
+        """
+
+rule deeptools_plotPCA:
+    input:
+        "analysis/deeptools_multiBWsummary/results.npz"
+    output:
+        pdf="analysis/deeptools_plotPCA/pca.pdf"
+    log:
+        stdout="logs/deeptools_plotPCA/out.o",
+        stderr="logs/deeptools_plotPCA/err.e"
+    benchmark:
+        "benchmarks/deeptools_plotPCA/bench.txt"
+    params:
+        temp=os.path.join(snakemake_dir, "tmp")
+    threads: 1
+    envmodules:
+        config['modules']['deeptools']
+    resources:
+        mem_gb=64
+    shell:
+        """
+        export TMPDIR={params.temp}
+
+        plotPCA --transpose -in {input} -o {output.pdf} --log2 --ntop 5000 
         """
 
 rule deeptools_bamcompare:
