@@ -459,7 +459,7 @@ rule deeptools_plotCorr:
         """
         export TMPDIR={params.temp}
 
-        plotCorrelation -c spearman -p heatmap --skipZeros -o {output.pdf}
+        plotCorrelation --corData {input} -c spearman -p heatmap --skipZeros -o {output.pdf}
 
         """
 
