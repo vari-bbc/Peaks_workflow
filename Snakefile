@@ -415,7 +415,8 @@ rule deeptools_cov_rmdups:
 
 rule deeptools_multiBWsummary:
     input:
-        expand("analysis/deeptools_cov_rmdups/{sample}_filt_alns_rmdups.bw", sample=samples['sample'].values)
+        bws=expand("analysis/deeptools_cov_rmdups/{sample}_filt_alns_rmdups.bw", sample=samples['sample'].values),
+        peaks="analysis/merge_all_peaks/all_merged_{peak_type}.bed".format(peak_type="macs2_nfr_broad" if config['atacseq'] else "macs2_narrow")
     output:
         "analysis/deeptools_multiBWsummary/results.npz"
     log:
@@ -435,7 +436,7 @@ rule deeptools_multiBWsummary:
         """
         export TMPDIR={params.temp}
        
-        multiBigwigSummary bins -p {threads} --blackListFileName {params.blacklist} -b {input} -o {output}
+        multiBigwigSummary BED-file --BED {input.peaks} -p {threads} --blackListFileName {params.blacklist} -b {input.bws} -o {output}
 
         """
 
@@ -913,7 +914,7 @@ rule peaks_venn:
         "bin/peaks_venn.Rmd"
 
 def get_merged_beds (wildcards):
-    atac_peak_types = ['macs2_narrow','macs2_broad', 'macs2_nfr_narrow','macs2_nfr_broad']
+    atac_peak_types = ['macs2_nfr_broad','macs2_nfr_narrow','macs2_narrow','macs2_broad']
     if config['run_hmmratac']:
         atac_peak_types = atac_peak_types + ['hmmratac_nfr']# if config['run_hmmratac']
     merged_beds = expand("analysis/merge_all_peaks/all_merged_{peak_type}.bed", peak_type=atac_peak_types if config['atacseq'] else ['macs2_narrow','macs2_broad'])
