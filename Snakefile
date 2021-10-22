@@ -424,6 +424,7 @@ rule deeptools_multiBWsummary:
     benchmark:
         "benchmarks/deeptools_multiBWsummary/bench.txt"
     params:
+        blacklist=blacklist,
         temp=os.path.join(snakemake_dir, "tmp")
     threads: 8
     envmodules:
@@ -434,7 +435,7 @@ rule deeptools_multiBWsummary:
         """
         export TMPDIR={params.temp}
        
-        multiBigwigSummary bins -p {threads} -b {input} -o {output}
+        multiBigwigSummary bins -p {threads} --blackListFileName {params.blacklist} -b {input} -o {output}
 
         """
 
