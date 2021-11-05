@@ -313,7 +313,7 @@ rule filt_bams:
         "benchmarks/filt_bams/{sample}.txt"
     params:
         mapq=30,
-        flags_to_exclude="780",
+        flags_to_exclude="2828",
         flags_to_include=lambda wildcards: "-f 2" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "",
         keep_chroms = chroms_no_mito #chroms_gt_cutoff #chroms_no_mito if atacseq else ''
     threads: 8
