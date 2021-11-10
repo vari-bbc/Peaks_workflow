@@ -1073,7 +1073,9 @@ rule multiqc:
         expand("analysis/preseq_complexity/{sample.sample}.c_curve.txt", sample=samples.itertuples()),
         expand("analysis/preseq_complexity/{sample.sample}.lc_extrap.txt", sample=samples.itertuples()),
         expand("analysis/bwamem/flagstat/{sample.sample}.flagstat", sample=samples.itertuples()),
+        expand("analysis/bwamem/{sample.sample}.bam.idxstat", sample=samples.itertuples()),
         expand("analysis/filt_bams/{sample.sample}_filt_alns.bam.idxstat", sample=samples.itertuples()),
+        expand("analysis/filt_bams/flagstat/{sample.sample}_filt_alns.flagstat", sample=samples.itertuples()),
         expand("analysis/filt_bams/CollectInsertSizeMetrics/{sample.sample}_filt_alns.insert_size_metrics.txt", sample=samples[samples['se_or_pe']=="PE"].itertuples()),
         expand("analysis/bwamem/CollectAlignmentSummaryMetrics/{sample.sample}.aln_metrics.txt", sample=samples.itertuples()),
         expand("analysis/bwamem/{sample.sample}.samblaster.e", sample=samples.itertuples()),
@@ -1094,10 +1096,11 @@ rule multiqc:
         "analysis/preseq_complexity/",
         #"analysis/fastp/",
         "analysis/bwamem/flagstat/",
-        "analysis/bwamem/*.samblaster.e",
+        "analysis/bwamem/",
         "analysis/fastq_screen/",
         "analysis/bwamem/CollectAlignmentSummaryMetrics/",
         "analysis/filt_bams/",
+        "analysis/filt_bams/flagstat/",
         "analysis/deeptools_plotenrichment/"],
         PE_dirs=["analysis/filt_bams/CollectInsertSizeMetrics/"] if not all(x == "SE" for x in samples['se_or_pe'].values)  else [],
         outfile="multiqc_report"
@@ -1110,6 +1113,7 @@ rule multiqc:
         """
         multiqc \
         --force \
+        --config bin/multiqc_config.yaml \
         --outdir {params.workdir} \
         --filename {params.outfile} \
         {params.dirs} {params.PE_dirs}

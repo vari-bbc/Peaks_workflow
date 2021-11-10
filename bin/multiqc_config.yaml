@@ -1,0 +1,22 @@
+top_modules:
+    - fastqc:
+        name: 'FastQC (raw)'
+        path_filters:
+            - '*/fastqc/*_fastqc.zip'
+    - fastqc:
+        name: 'FastQC (trimmed)'
+        info: 'This section of the report shows FastQC results after adapter trimming.'
+        target: ''
+        path_filters:
+            - '*/trim_galore/*_fastqc.zip'
+    - cutadapt
+    - samtools:
+        name: 'Samtools (pre-filtering)'
+        path_filters:
+            - '*/bwamem/*'
+    - samtools:
+        name: 'Samtools (post-filtering)'
+        info: 'Samtools after removing ChrM and retaining only mapped, primary, properly paired alignments.'
+        target: ''
+        path_filters:
+            - '*/filt_bams/*'
