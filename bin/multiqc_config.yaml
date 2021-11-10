@@ -20,3 +20,7 @@ top_modules:
         target: ''
         path_filters:
             - '*/filt_bams/*'
+extra_fn_clean_trim:
+     - "_filt_alns"
+     - "_val_1"
+     - "_val_2"
