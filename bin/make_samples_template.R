@@ -21,11 +21,13 @@ opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
 
-r1_files <- list.files(opt$fq_dir, pattern=opt$r1_rgx)
-
+r1_files <- list.files(opt$fq_dir, pattern=opt$r1_rgx, recursive=TRUE)
+if (length(r1_files) == 0){
+    stop("No read files found.")
+}
 if(!opt$se){
     r2_rgx <- str_replace(opt$r1_rgx, "1", "2")
-    r2_files <- list.files(opt$fq_dir, pattern=r2_rgx)
+    r2_files <- list.files(opt$fq_dir, pattern=r2_rgx, recursive=TRUE)
 
     if (length(r2_files) == 0){
         stop("No R2 files found. Please set --se if single end reads.")
@@ -40,7 +42,7 @@ if(!opt$se){
 }
 
 df <- tibble(fq1=r1_files) %>%
-    dplyr::mutate(sample=str_extract(fq1, opt$sample_rgx), control=NA, sample_group=sample,
+    dplyr::mutate(sample=str_extract(basename(fq1), opt$sample_rgx), control=NA, sample_group=sample,
                   fq2=r2_files) %>%
     dplyr::select(sample, control, fq1, fq2, sample_group) %>%
     write_tsv(., opt$out)
