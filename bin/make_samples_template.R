@@ -3,6 +3,7 @@ suppressMessages(library(dplyr))
 library(stringr)
 library(tibble)
 library(optparse)
+library(gtools)
 
 option_list <- list(
   make_option(c("-f", "--fq_dir"), type="character", default="../raw_data/", 
@@ -44,5 +45,11 @@ if(!opt$se){
 df <- tibble(fq1=r1_files) %>%
     dplyr::mutate(sample=str_extract(basename(fq1), opt$sample_rgx), control=NA, sample_group=sample,
                   fq2=r2_files) %>%
-    dplyr::select(sample, control, fq1, fq2, sample_group) %>%
+    dplyr::select(sample, control, fq1, fq2, sample_group)
+
+# version sort by the sample column
+version_sort <- mixedorder(df$sample)
+df <- df[version_sort, ]
+
+df %>%
     write_tsv(., opt$out)
