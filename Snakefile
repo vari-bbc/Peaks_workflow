@@ -1116,7 +1116,7 @@ rule multiqc:
         --config bin/multiqc_config.yaml \
         --outdir {params.workdir} \
         --filename {params.outfile} \
-        {params.dirs} {params.PE_dirs}
+        {params.dirs} {params.PE_dirs} analysis/macs2/*narrow*
 
         """
 
