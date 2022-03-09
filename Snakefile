@@ -1063,6 +1063,30 @@ rule preseq_complexity:
 
         """
 
+rule qualimap:
+    """
+    Run qualimap on unfiltered alignments.
+    """
+    input:
+        "analysis/bwamem/{sample}.bam",
+    output:
+        touch("analysis/qualimap/{sample}/done")
+    log:
+        stdout="logs/qualimap/{sample}.o",
+        stderr="logs/qualimap/{sample}.e"
+    benchmark:
+        "benchmarks/qualimap/{sample}.txt"
+    envmodules:
+        config['modules']['qualimap']
+    params:
+    resources:
+        mem_gb=100
+    threads: 8
+    shell:
+        """
+        qualimap bamqc -bam {input} --java-mem-size={resources.mem_gb}G --paint-chromosome-limits -outdir analysis/qualimap/{wildcards.sample} -nt {threads}
+
+        """
 
 rule multiqc:
     input:
@@ -1082,6 +1106,7 @@ rule multiqc:
         expand("analysis/fastq_screen/{sample.sample}_R1_screen.html", sample=samples.itertuples()),
         expand("analysis/fastq_screen/{sample.sample}_R2_screen.html", sample=samples[samples['se_or_pe']=="PE"].itertuples()),
         expand("analysis/deeptools_plotenrichment/{sample.sample}.rawcts", sample=samples_no_controls.itertuples()),
+        expand("analysis/qualimap/{sample.sample}/done", sample=samples.itertuples()),
     output:
         "analysis/multiqc/multiqc_report.html",
     log:
@@ -1093,6 +1118,7 @@ rule multiqc:
         workdir="analysis/multiqc/",
         dirs=["analysis/trim_galore/",
         "analysis/fastqc/",
+        "analysis/qualimap/",
         "analysis/preseq_complexity/",
         #"analysis/fastp/",
         "analysis/bwamem/flagstat/",
