@@ -19,4 +19,6 @@ This workflow is designed to align, perform basic QC and call peaks for peak-bas
     
     iv. `fq2` -- R2 file; fill in with NA if SE data.
 
+   v. `sample_group` -- Grouping variable for replicates.
+
 5. From the root directory of the project, run `qsub bin/run_snakemake.sh`.
