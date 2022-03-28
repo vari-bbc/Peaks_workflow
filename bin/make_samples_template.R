@@ -22,7 +22,7 @@ opt_parser <- OptionParser(option_list=option_list)
 opt <- parse_args(opt_parser)
 
 
-r1_files <- list.files(opt$fq_dir, pattern=opt$r1_rgx, recursive=TRUE)
+r1_files <- list.files(opt$fq_dir, pattern=paste0(opt$r1_rgx, "\\.*f(ast)?q(\\.gz)?$"), recursive=TRUE)
 if (length(r1_files) == 0){
     stop("No read files found.")
 }
