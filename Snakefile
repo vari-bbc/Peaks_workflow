@@ -5,7 +5,7 @@ import re
 import itertools
 from snakemake.utils import validate, min_version
 ##### set minimum snakemake version #####
-min_version("5.28.0")
+min_version("6.15.0")
 
 ##### Editable variables #####
 
@@ -37,9 +37,9 @@ chroms_no_mito = ' '.join(fai_parsed[fai_parsed['chr'] != mito_chrom]['chr'].val
 units = pd.read_table("bin/samples.tsv", dtype={"sample" : str, "sample_group" : str })
 units['se_or_pe'] = ["SE" if x else "PE" for x in units['fq2'].isnull()]
 
-samples = units[["sample","control","sample_group","se_or_pe"]].drop_duplicates()
+samples = units[["sample","control","sample_group","enriched_factor","se_or_pe"]].drop_duplicates()
 if not samples['sample'].is_unique:
-    raise Exception('A sample has more than one combination of control, smaple_group and/or se_or_pe.')
+    raise Exception('A sample has more than one combination of control, smaple_group, enriched_factor, and/or se_or_pe.')
 
 # Filter for sample rows that are not controls
 controls_list = list(itertools.chain.from_iterable( [x.split(',') for x in samples['control'].values if not pd.isnull(x)] ))
@@ -79,7 +79,8 @@ rule all:
         "analysis/deeptools_heatmap_genes/genes.pdf",
         expand("analysis/atacseqc/{sample}{suffix}", sample=samples_no_controls["sample"], suffix=["_tsse.rds","_tsse.pdf"]) if config['atacseq'] else [],
         "analysis/deeptools_plotCorr/corr_ht.pdf",
-        "analysis/deeptools_plotPCA/pca.pdf"
+        "analysis/deeptools_plotPCA/pca.pdf",
+        expand("analysis/deeptools_cov_rmdups_{norm_type}/{sample}_filt_alns_rmdups.bw", norm_type=config['addtnl_bigwig_norms'], sample=samples['sample']) if isinstance(config['addtnl_bigwig_norms'], list) else [] #sample=samples[pd.notnull(samples['enriched_factor'])]['sample'])
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -407,11 +408,147 @@ rule deeptools_cov_rmdups:
         {params.extend_reads} \
         --blackListFileName {params.blacklist} \
         -o {output.bigwig_rmdups} \
-        --binSize {params.binsize} \
         --normalizeUsing {params.norm_method} \
         --samFlagExclude {params.sam_exclude} \
         {params.sam_keep}
 
+        """
+
+rule get_std_chrom_names:
+    input:
+    output:
+        "analysis/misc/std_chroms.txt"
+    log:
+        stdout="logs/get_std_chrom_names/out.o",
+        stderr="logs/get_std_chrom_names/err.e",
+    benchmark:
+        "benchmarks/get_std_chrom_names/bench.txt"
+    params:
+        ref_fasta=config["ref"]["sequence"],
+    threads: 1
+    resources:
+        mem_gb=20
+    envmodules:
+        config['modules']['R']
+    script:
+        "bin/scripts/get_standard_chrom_names.R"
+
+rule csaw_norm_factors:
+    input:
+        bams=lambda wildcards: expand("analysis/filt_bams/{sample}_filt_alns.bam", sample=samples[samples['enriched_factor']==wildcards.enriched_factor]['sample']),
+        std_chroms="analysis/misc/std_chroms.txt"
+    output:
+        bkgrd="analysis/bigwig_norm_factors/{enriched_factor}_csaw_bkgd.tsv", 
+        hiAbund="analysis/bigwig_norm_factors/{enriched_factor}_csaw_hiAbund.tsv",
+        rds=expand("analysis/bigwig_norm_factors/{{enriched_factor}}_{obj_nm}.rds", obj_nm=['binned','small_wins','filt_small_wins'])
+    log:
+        stdout="logs/csaw_norm_factors/{enriched_factor}.o",
+        stderr="logs/csaw_norm_factors/{enriched_factor}.e",
+    benchmark:
+        "benchmarks/csaw_norm_factors/{enriched_factor}.txt"
+    params:
+        mito_chr=mito_chrom,
+        blacklist=config['ref']['blacklist'],
+        out_pref="analysis/bigwig_norm_factors/{enriched_factor}",
+        bam_samp_names=lambda wildcards: samples[samples['enriched_factor']==wildcards.enriched_factor]['sample']
+    threads: 8
+    resources:
+        mem_gb=120
+    envmodules:
+        config['modules']['R']
+    script:
+        "bin/scripts/calc_norm_factors.R"
+
+rule cutnrun_ecoli_scale_factors:
+    """
+    Adapted from https://www.protocols.io/view/cut-amp-tag-data-processing-and-analysis-tutorial-e6nvw93x7gmk/v1
+    """
+    input:
+        bam=lambda wildcards: expand("analysis/filt_bams/{sample}_filt_alns.bam", sample=samples['sample']),
+    output:
+        "analysis/bigwig_norm_factors/cutnrun_ecoli_scale_factors.tsv"
+    log:
+        stdout="logs/cutnrun_ecoli_scale_factors/out.o",
+        stderr="logs/cutnrun_ecoli_scale_factors/err.e",
+    benchmark:
+        "benchmarks/cutnrun_ecoli_scale_factors/bench.txt"
+    params:
+        ecoli_chrom=config["ecoli_chrom"]
+    threads: 8
+    resources:
+        mem_gb=120
+    envmodules:
+        config['modules']['samtools']
+    shell:
+        """
+        printf "sample\\tecoli_frags\\tfinal.factors\\n" > {output}
+        for bam in {input.bam}
+        do
+            sample=`basename $bam | perl -npe 'chomp; die unless /(_filt_alns.bam)/; s/$1//'`
+            ecoli_frags=`samtools view -@{threads} -c -f 64 -F 1024 $bam {params.ecoli_chrom}` # count first read only, and ignore duplicates
+            scale_factor=`echo "10000 / $ecoli_frags" | bc -l`
+            printf "$sample\\t$ecoli_frags\\t$scale_factor\\n" >> {output}
+        done
+        """
+
+def get_bigwig_norm_factors_file(wildcards):
+    curr_enriched = samples[samples['sample']==wildcards.sample]['enriched_factor'].values[0]
+    if (wildcards.norm_type == "csaw_bkgd"):
+        return "analysis/bigwig_norm_factors/{enriched_factor}_csaw_bkgd.tsv".format(enriched_factor=curr_enriched)
+    if (wildcards.norm_type == "csaw_hiAbund"):
+        return "analysis/bigwig_norm_factors/{enriched_factor}_csaw_hiAbund.tsv".format(enriched_factor=curr_enriched)
+    if (wildcards.norm_type == "ecoli"):
+        return "analysis/bigwig_norm_factors/cutnrun_ecoli_scale_factors.tsv"
+
+def get_bigwig_norm_factor(wildcards, input):
+    df = pd.read_table(input.norm_factors)
+    scalefactor = df[df['sample']==wildcards.sample]['final.factors'].values[0]
+    return str(scalefactor)
+
+rule alternate_norm_bigwigs:
+    """
+    Assume PE reads, so we set --extendReads by default and --samFlagInclude 64 (first read only)
+    """
+    input:
+        bam="analysis/filt_bams/{sample}_filt_alns.bam",
+        norm_factors=get_bigwig_norm_factors_file,
+    output:
+        bigwig_rmdups="analysis/deeptools_cov_rmdups_{norm_type}/{sample}_filt_alns_rmdups.bw"
+    log:
+        stdout="logs/deeptools_cov_rmdups_{norm_type}/{sample}.o",
+        stderr="logs/deeptools_cov_rmdups_{norm_type}/{sample}.e",
+    benchmark:
+        "benchmarks/deeptools_cov_rmdups_{norm_type}/{sample}.txt"
+    params:
+        blacklist=blacklist,
+        binsize=bamCoverage_binsize,
+        scale_factor=get_bigwig_norm_factor,
+        sam_exclude="1024",
+        norm="None",
+        temp="analysis/deeptools_cov_rmdups_{norm_type}/{sample}.tmp"
+    threads: 8
+    resources:
+        mem_gb=120
+    envmodules:
+        config['modules']['deeptools']
+    shell:
+        """
+        export TMPDIR={params.temp}
+        mkdir -p {params.temp}
+
+        bamCoverage \
+        -p {threads} \
+        --binSize {params.binsize} \
+        -b {input.bam} \
+        --extendReads \
+        --blackListFileName {params.blacklist} \
+        -o {output.bigwig_rmdups} \
+        --normalizeUsing {params.norm} \
+        --scaleFactor {params.scale_factor} \
+        --samFlagExclude {params.sam_exclude} \
+        --samFlagInclude 64
+
+        rm -r {params.temp}
         """
 
 rule deeptools_multiBWsummary:

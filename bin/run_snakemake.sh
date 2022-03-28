@@ -8,7 +8,7 @@
 
 cd ${PBS_O_WORKDIR}
 
-snakemake_module="bbc/snakemake/snakemake-5.28.0"
+snakemake_module="bbc/snakemake/snakemake-6.15.0"
 
 module load $snakemake_module
 

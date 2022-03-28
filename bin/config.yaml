@@ -16,6 +16,15 @@ ref:
   # When we filter alignments for peak calling, we remove contigs smaller than 'cutoff'. This is meant to be a way to retain only the nuclear chromosomes (not mitochondrial). Make sure that this value is not larger than any of the chromosomal contigs in your genome.
   #chrom_min_bp: 5000000
 
+
+# comment out what is not needed in 'addtnl_bigwig_norms'. These are additional approaches to normalize the BigWigs. 'ecoli' is for CutnRun or CutnTag protocols.
+addtnl_bigwig_norms:
+    - 'csaw_bkgd'
+    - 'csaw_hiAbund'
+    - 'ecoli'
+
+ecoli_chrom: "ec_Chromosome" # used for normalization if requested
+
 atacseq: false
 run_hmmratac: false # Does not matter unless atacseq==true. This option provided because HMMRATAC seems to have issues with low-pass/pilot sequencing data.
   #peakset_for_FRiP: 'narrow'
@@ -43,7 +52,7 @@ modules:
   multiqc: bbc/multiqc/multiqc-1.9
   preseq: bbc/preseq/preseq-2.0.3
   qualimap: bbc/qualimap/qualimap_v.2.2.2
-  R: bbc/R/R-4.0.2-setR_LIBS_USER
+  R: bbc/R/R-4.1.0-setR_LIBS_USER
   samblaster: bbc/samblaster/samblaster-0.1.24
   samtools: bbc/samtools/samtools-1.9
   trim_galore: bbc/trim_galore/trim_galore-0.6.0
