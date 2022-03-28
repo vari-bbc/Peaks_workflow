@@ -44,8 +44,8 @@ if(!opt$se){
 
 df <- tibble(fq1=r1_files) %>%
     dplyr::mutate(sample=str_extract(basename(fq1), opt$sample_rgx), control=NA, sample_group=sample,
-                  fq2=r2_files) %>%
-    dplyr::select(sample, control, fq1, fq2, sample_group)
+                  fq2=r2_files, enriched_factor="") %>%
+    dplyr::select(sample, control, fq1, fq2, sample_group, enriched_factor)
 
 # version sort by the sample column
 version_sort <- mixedorder(df$sample)
