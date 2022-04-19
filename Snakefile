@@ -998,11 +998,12 @@ rule merge_all_peaks:
 
 rule rm_blacklist_peaks:
     """
-    Remove blacklist regions from macs2 peaks using overlap of 1bp or more
+    Remove blacklist regions from macs2 peaks using overlap of 1bp or more. In addition, remove nonstandard chromosomes.
     """
     input:
         broad="analysis/{macs2_type}/{sample}_macs2_broad_peaks.broadPeak",
-        narrow="analysis/{macs2_type}/{sample}_macs2_narrow_peaks.narrowPeak"
+        narrow="analysis/{macs2_type}/{sample}_macs2_narrow_peaks.narrowPeak",
+        std_chroms="analysis/misc/std_chroms.txt"
     output:
         broad="analysis/{macs2_type}/rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak",
         narrow="analysis/{macs2_type}/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak"
@@ -1023,12 +1024,13 @@ rule rm_blacklist_peaks:
         cat {input.narrow} | \
         bedtools intersect -v \
         -a "stdin" \
-        -b {params.blacklist} > {output.narrow} 
+        -b {params.blacklist} | grep -P "$(cat {input.std_chroms} | perl -lane 'print q:^:.join(q:\\t|^:, @F).q:\\t:')" > {output.narrow} 
+
 
         cat {input.broad} | \
         bedtools intersect -v \
         -a "stdin" \
-        -b {params.blacklist} > {output.broad}
+        -b {params.blacklist} | grep -P "$(cat {input.std_chroms} | perl -lane 'print q:^:.join(q:\\t|^:, @F).q:\\t:')" > {output.broad}
 
         """
 
