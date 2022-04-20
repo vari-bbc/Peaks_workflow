@@ -80,7 +80,8 @@ rule all:
         expand("analysis/atacseqc/{sample}{suffix}", sample=samples_no_controls["sample"], suffix=["_tsse.rds","_tsse.pdf"]) if config['atacseq'] else [],
         "analysis/deeptools_plotCorr/corr_ht.pdf",
         "analysis/deeptools_plotPCA/pca.pdf",
-        expand("analysis/deeptools_cov_rmdups_{norm_type}/{sample}_filt_alns_rmdups.bw", norm_type=config['addtnl_bigwig_norms'], sample=samples['sample']) if isinstance(config['addtnl_bigwig_norms'], list) else [] #sample=samples[pd.notnull(samples['enriched_factor'])]['sample'])
+        expand("analysis/deeptools_cov_rmdups_{norm_type}/{sample}_filt_alns_rmdups.bw", norm_type=config['addtnl_bigwig_norms'], sample=samples['sample']) if isinstance(config['addtnl_bigwig_norms'], list) else [],
+        expand("analysis/homer_find_motifs/{sample}/homerMotifs.all.motifs", sample=samples_no_controls["sample"]) if config['homer']['run'] else []#sample=samples[pd.notnull(samples['enriched_factor'])]['sample'])
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -1047,6 +1048,32 @@ rule rm_blacklist_peaks:
 #    elif frip_peakset=="broad":
 #        return("analysis/macs2/{sample}_macs2_broad_peaks.broadPeak")
 
+rule homer_find_motif:
+    input:
+        "analysis/macs2/rm_blacklist/{sample}_macs2_narrow_summits.rm_blacklist.bed"
+    output:
+        "analysis/homer_find_motifs/{sample}/homerMotifs.all.motifs"
+    log:
+        stdout="logs/homer_find_motif/{sample}.o",
+        stderr="logs/homer_find_motif/{sample}.e"
+    benchmark:
+        "benchmarks/homer_find_motif/{sample}.txt"
+    params:
+        outdir="analysis/homer_find_motifs/{sample}/",
+        genome=config['homer']['genome'],
+        size=config['homer']['size']
+    threads: 8
+    envmodules:
+        "bbc/HOMER/HOMER-4.11.1"
+    resources:
+        mem_gb=200
+    shell:
+        """
+        findMotifsGenome.pl {input} {params.genome} {params.outdir} \
+        -size {params.size} -p {threads} \
+        -mask
+
+        """
 
 def get_peaks_for_venn (wildcards):
     peaks = {
