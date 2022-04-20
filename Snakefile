@@ -1003,10 +1003,12 @@ rule rm_blacklist_peaks:
     input:
         broad="analysis/{macs2_type}/{sample}_macs2_broad_peaks.broadPeak",
         narrow="analysis/{macs2_type}/{sample}_macs2_narrow_peaks.narrowPeak",
+        narrow_summits="analysis/{macs2_type}/{sample}_macs2_narrow_summits.bed",
         std_chroms="analysis/misc/std_chroms.txt"
     output:
         broad="analysis/{macs2_type}/rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak",
-        narrow="analysis/{macs2_type}/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak"
+        narrow="analysis/{macs2_type}/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak",
+        narrow_summits="analysis/{macs2_type}/rm_blacklist/{sample}_macs2_narrow_summits.rm_blacklist.bed"
     log:
         stdout="logs/{macs2_type}/rm_blacklist/{sample}.o",
         stderr="logs/{macs2_type}/rm_blacklist/{sample}.e"
@@ -1015,7 +1017,8 @@ rule rm_blacklist_peaks:
     params:
         blacklist=blacklist,
     envmodules:
-        config['modules']['bedtools']
+        config['modules']['bedtools'],
+        config['modules']['R']
     threads: 4
     resources:
         mem_gb=100
@@ -1025,12 +1028,16 @@ rule rm_blacklist_peaks:
         bedtools intersect -v \
         -a "stdin" \
         -b {params.blacklist} | grep -P "$(cat {input.std_chroms} | perl -lane 'print q:^:.join(q:\\t|^:, @F).q:\\t:')" > {output.narrow} 
-
+    
+        # subset the summits also based on the names of the retained narrow peaks
+        Rscript -e 'library(magrittr); library(rtracklayer); keep_pks <- import("{output.narrow}")$name; gr <- import("{input.narrow_summits}"); gr[gr$name %in% keep_pks] %>% export(., "{output.narrow_summits}")'
 
         cat {input.broad} | \
         bedtools intersect -v \
         -a "stdin" \
         -b {params.blacklist} | grep -P "$(cat {input.std_chroms} | perl -lane 'print q:^:.join(q:\\t|^:, @F).q:\\t:')" > {output.broad}
+
+
 
         """
 
@@ -1039,6 +1046,7 @@ rule rm_blacklist_peaks:
 #        return("analysis/macs2/{sample}_macs2_narrow_peaks.narrowPeak")
 #    elif frip_peakset=="broad":
 #        return("analysis/macs2/{sample}_macs2_broad_peaks.broadPeak")
+
 
 def get_peaks_for_venn (wildcards):
     peaks = {
