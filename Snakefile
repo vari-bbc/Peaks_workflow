@@ -1271,6 +1271,7 @@ rule multiqc:
         expand("analysis/preseq_complexity/{sample.sample}.c_curve.txt", sample=samples.itertuples()),
         expand("analysis/preseq_complexity/{sample.sample}.lc_extrap.txt", sample=samples.itertuples()),
         expand("analysis/bwamem/flagstat/{sample.sample}.flagstat", sample=samples.itertuples()),
+        expand("analysis/bwamem/CollectInsertSizeMetrics/{sample.sample}.insert_size_metrics.txt", sample=samples[samples['se_or_pe']=="PE"].itertuples()),
         expand("analysis/bwamem/{sample.sample}.bam.idxstat", sample=samples.itertuples()),
         expand("analysis/filt_bams/{sample.sample}_filt_alns.bam.idxstat", sample=samples.itertuples()),
         expand("analysis/filt_bams/flagstat/{sample.sample}_filt_alns.flagstat", sample=samples.itertuples()),
