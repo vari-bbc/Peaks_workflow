@@ -20,6 +20,16 @@ top_modules:
         target: ''
         path_filters:
             - '*/filt_bams/*'
+    - picard:
+        name: 'Picard (pre-filtering)'
+        path_filters:
+            - '*/bwamem/*'
+    - picard:
+        name: 'Picard (post-filtering)'
+        info: 'Picard metrics after removing ChrM and retaining only mapped, primary, properly paired alignments.'
+        target: ''
+        path_filters:
+            - '*/filt_bams/*'
 extra_fn_clean_trim:
      - "_filt_alns"
      - "_val_1"
