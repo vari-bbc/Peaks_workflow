@@ -226,7 +226,7 @@ rule bwamem:
     input:
         lambda wildcards: expand("analysis/trim_galore/{sample}_R{read}_val_{read}.fq.gz", read=["1","2"], sample=wildcards.sample) if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "analysis/trim_galore/{sample}_R1_trimmed.fq.gz"
     output:
-        outbam="analysis/bwamem/{sample}.bam",
+        outbam=temp("analysis/bwamem/{sample}.bam"),
         outbai="analysis/bwamem/{sample}.bam.bai",
         idxstat="analysis/bwamem/{sample}.bam.idxstat",
         samblaster_err="analysis/bwamem/{sample}.samblaster.e",
@@ -909,6 +909,125 @@ rule macs2:
         
         """
 
+rule bamtobed:
+    """
+    Dedup BAMs, name-sort and convert to BED for peak calling.
+    """
+    input:
+        "analysis/filt_bams/{sample}_filt_alns.bam"
+    output:
+        bam=temp("analysis/bamtobed/{sample}_filt_alns.dedup.nmsort.bam"),
+        bedpe="analysis/bamtobed/{sample}.bedpe.gz",
+        bed="analysis/bamtobed/{sample}.bed"
+    log:
+        stdout="logs/bamtobed/{sample}.o",
+        stderr="logs/bamtobed/{sample}.e",
+    benchmark:
+        "benchmarks/bamtobed/{sample}.txt"
+    params:
+    threads: 8
+    envmodules:
+        config['modules']['samtools'],
+        config['modules']['bedtools']
+    resources:
+        mem_gb=80
+    shell:
+        """
+        # dedup and name sort
+        samtools view -b -@ {threads} -F 1024 {input} | samtools sort -@ {threads} -n -o {output.bam}
+
+        # below adapted from https://github.com/ENCODE-DCC/atac-seq-pipeline/blob/master/src/encode_task_bam2ta.py
+
+        bedtools bamtobed -bedpe -mate1 -i {output.bam} | gzip -nc > {output.bedpe}
+
+        zcat {output.bedpe} | awk 'BEGIN{{OFS="\\t"}}{{printf "%s\\t%s\\t%s\\tN\\t1000\\t%s\\n%s\\t%s\\t%s\\tN\\t1000\\t%s\\n",$1,$2,$3,$9,$4,$5,$6,$10}}' | gzip -nc > {output.bed}
+
+
+        """
+
+rule macs2_ENCODE_atac:
+    """
+    For ATAC-seq, use the ENCODE method of running MACS2 via -f BED. Specific MACS2 params copied from PEPATAC. Both ENCODE and PEPATAC run only in narrow mode, but we run also in broad mode here for now to make it easier to fit in with the existing parts in this specific workflow.
+    """
+    input:
+        trt="analysis/bamtobed/{sample}.bed",
+        chr_sizes="analysis/prep_chromsizes_file/chrom_sizes.tsv"
+        #trt="analysis/filt_bams/{sample}_filt_alns.bam",
+    output:
+        broad=multiext("analysis/macs2_ENCODE_atac/{sample}_macs2_broad_peaks", ".xls", ".broadPeak", ".gappedPeak"),
+        narrow=multiext("analysis/macs2_ENCODE_atac/{sample}_macs2_narrow_peaks", ".xls", ".narrowPeak"),
+        narrow_summits="analysis/macs2_ENCODE_atac/{sample}_macs2_narrow_summits.bed",
+        narrow_lambda_bedgraph=temp("analysis/macs2_ENCODE_atac/{sample}_macs2_narrow_control_lambda.bdg"),
+        narrow_bedgraph=temp("analysis/macs2_ENCODE_atac/{sample}_macs2_narrow_treat_pileup.bdg"),
+        narrow_bedgraph_clip=temp("analysis/macs2_ENCODE_atac/{sample}_macs2_narrow_treat_pileup.clip.bdg"),
+        narrow_bigwig="analysis/macs2_ENCODE_atac/{sample}_macs2_narrow_treat_pileup.bw"
+    log:
+        stdout="logs/macs2_ENCODE_atac/{sample}.o",
+        stderr="logs/macs2_ENCODE_atac/{sample}.e"
+    benchmark:
+        "benchmarks/macs2_ENCODE_atac/{sample}.txt"
+    params:
+        species=macs2_species,
+        broad_name="{sample}_macs2_broad",
+        narrow_name="{sample}_macs2_narrow",
+        outdir="analysis/macs2_ENCODE_atac/",
+        temp_dir="tmp/",
+        q_cutoff="0.05"
+    envmodules:
+        config['modules']['macs2'],
+        config['modules']['ucsc']
+    threads: 1
+    resources:
+        mem_gb=100
+    shell:
+        """
+        # ENCODE uses -p 0.01 but we use -q 0.05 here to be consistent with the rest of this workflow
+
+        macs2 \
+        callpeak \
+        -t {input.trt} \
+        -f 'BED' \
+        --outdir {params.outdir} \
+        -n {params.broad_name} \
+        -g {params.species} \
+        --shift -75 --extsize 150 \
+        --nomodel \
+        -q {params.q_cutoff} \
+        --keep-dup all \
+        --broad \
+        --tempdir {params.temp_dir}
+
+        echo "END broad peak calling" 1>&2
+        echo "END broad peak calling"
+
+        macs2 \
+        callpeak \
+        -t {input.trt} \
+        -f 'BED' \
+        --outdir {params.outdir} \
+        -n {params.narrow_name} \
+        -g {params.species} \
+        --shift -75 --extsize 150 \
+        --nomodel --call-summits \
+        -q {params.q_cutoff} \
+        --keep-dup all \
+        -B \
+        --SPMR \
+        --tempdir {params.temp_dir}
+        
+        echo "END narrow peak calling" 1>&2
+        echo "END narrow peak calling"
+
+        # remove (-truncate leads to intervals where the end occurs before start) the intervals that extend past the end of a chromosome
+        bedClip -verbose=2 {output.narrow_bedgraph} {input.chr_sizes} {output.narrow_bedgraph_clip}
+
+        bedGraphToBigWig {output.narrow_bedgraph_clip} {input.chr_sizes} {output.narrow_bigwig} 
+
+        echo "END narrow peak calling" 1>&2
+        echo "END narrow peak calling"
+
+        """
+
 rule hmmratac:
     """
     Run HMMRATAC for peak calling.
@@ -973,7 +1092,10 @@ def get_peaks_for_merging (wildcards):
         return(expand("analysis/macs2_nfr/{sample}_macs2_broad_peaks.broadPeak", sample=samples_no_controls['sample'].values))
     if wildcards.peak_type == "hmmratac_nfr":
         return(expand("analysis/hmmratac/{sample}_peaks.filteredPeaks.openOnly.bed", sample=samples_no_controls['sample'].values))
-
+    if wildcards.peak_type == "macs2_ENCODE_atac_narrow":
+        return(expand("analysis/macs2_ENCODE_atac/{sample}_macs2_narrow_peaks.narrowPeak", sample=samples_no_controls['sample'].values))
+    if wildcards.peak_type == "macs2_ENCODE_atac_broad":
+        return(expand("analysis/macs2_ENCODE_atac/{sample}_macs2_broad_peaks.broadPeak", sample=samples_no_controls['sample'].values))
 
 rule merge_all_peaks:
     input:
@@ -1083,6 +1205,8 @@ def get_peaks_for_venn (wildcards):
     if (config['atacseq']):
         peaks['broad_nfr'] = expand("analysis/macs2_nfr/rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak", sample=samples_no_controls['sample'].values)
         peaks['narrow_nfr'] = expand("analysis/macs2_nfr/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples_no_controls['sample'].values)
+        peaks['broad_ENCODE_atac'] = expand("analysis/macs2_ENCODE_atac/rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak", sample=samples_no_controls['sample'].values)
+        peaks['narrow_ENCODE_atac'] = expand("analysis/macs2_ENCODE_atac/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples_no_controls['sample'].values)
         if (config['run_hmmratac']):
             peaks['hmmratac_nfr'] = expand("analysis/hmmratac/{sample}_peaks.filteredPeaks.openOnly.bed", sample=samples_no_controls['sample'].values)
 
@@ -1113,7 +1237,7 @@ rule peaks_venn:
         "bin/peaks_venn.Rmd"
 
 def get_merged_beds (wildcards):
-    atac_peak_types = ['macs2_nfr_broad','macs2_nfr_narrow','macs2_narrow','macs2_broad']
+    atac_peak_types = ['macs2_ENCODE_atac_broad','macs2_ENCODE_atac_narrow','macs2_nfr_broad','macs2_nfr_narrow','macs2_narrow','macs2_broad']
     if config['run_hmmratac']:
         atac_peak_types = atac_peak_types + ['hmmratac_nfr']# if config['run_hmmratac']
     merged_beds = expand("analysis/merge_all_peaks/all_merged_{peak_type}.bed", peak_type=atac_peak_types if config['atacseq'] else ['macs2_narrow','macs2_broad'])
@@ -1122,7 +1246,7 @@ def get_merged_beds (wildcards):
 rule deeptools_plotenrichment:
     input:
         bam="analysis/filt_bams/{sample}_filt_alns.bam",
-        bed=expand("analysis/{macs2_type}/{{sample}}_macs2_{type}_peaks.{type}Peak", type=['narrow','broad'], macs2_type=['macs2','macs2_nfr'] if config['atacseq'] else['macs2']),
+        bed=expand("analysis/{macs2_type}/{{sample}}_macs2_{type}_peaks.{type}Peak", type=['narrow','broad'], macs2_type=['macs2','macs2_nfr','macs2_ENCODE_atac'] if config['atacseq'] else['macs2']),
         merged_beds=get_merged_beds,
         #expand("analysis/merge_all_peaks/all_merged_{peak_type}.bed", peak_type=['macs2_narrow','macs2_broad', 'macs2_nfr_narrow','macs2_nfr_broad','hmmratac_nfr'] if config['atacseq'] else ['macs2_narrow','macs2_broad'])],
     output:
