@@ -1147,18 +1147,17 @@ rule rm_blacklist_peaks:
         mem_gb=100
     shell:
         """
-        cat {input.narrow} | \
+        # below note the '||' condition for the grep statement that allows a return code of 0 even when no matches are found (as in the case of an empty bed file)
         bedtools intersect -v \
-        -a "stdin" \
-        -b {params.blacklist} | grep -P "$(cat {input.std_chroms} | perl -lane 'print q:^:.join(q:\\t|^:, @F).q:\\t:')" > {output.narrow} 
+        -a {input.narrow} \
+        -b {params.blacklist} | {{ grep -P "$(cat {input.std_chroms} | perl -lane 'print q:^:.join(q:\\t|^:, @F).q:\\t:')" || [[ $? == 1 ]]; }} > {output.narrow} 
     
         # subset the summits also based on the names of the retained narrow peaks
         Rscript -e 'library(magrittr); library(rtracklayer); keep_pks <- import("{output.narrow}")$name; gr <- import("{input.narrow_summits}"); gr[gr$name %in% keep_pks] %>% export(., "{output.narrow_summits}")'
 
-        cat {input.broad} | \
         bedtools intersect -v \
-        -a "stdin" \
-        -b {params.blacklist} | grep -P "$(cat {input.std_chroms} | perl -lane 'print q:^:.join(q:\\t|^:, @F).q:\\t:')" > {output.broad}
+        -a {input.broad} \
+        -b {params.blacklist} | {{ grep -P "$(cat {input.std_chroms} | perl -lane 'print q:^:.join(q:\\t|^:, @F).q:\\t:')" || [[ $? == 1 ]]; }} > {output.broad}
 
 
 
