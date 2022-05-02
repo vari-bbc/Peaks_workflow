@@ -48,7 +48,7 @@ peaks <- lapply(rlang::set_names(names(peak_files), names(peak_files)), function
     stopifnot(length(sample_names) == length(peak_group))
     lapply(rlang::set_names(peak_group, sample_names), 
             function(peak_file){
-                rtracklayer::import(peak_file)
+                unique(rtracklayer::import(peak_file)) # use unique() to remove duplicate peaks resulting from using --call-summits in macs2
             })
 })
 ```
