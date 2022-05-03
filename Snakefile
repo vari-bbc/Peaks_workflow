@@ -80,7 +80,7 @@ rule all:
         expand("analysis/atacseqc/{sample}{suffix}", sample=samples_no_controls["sample"], suffix=["_tsse.rds","_tsse.pdf"]) if config['atacseq'] and config['run_ATACseqQC'] else [],
         "analysis/deeptools_plotCorr/corr_ht.pdf",
         "analysis/deeptools_plotPCA/pca.pdf",
-        expand("analysis/deeptools_cov_rmdups_{norm_type}/{sample}_filt_alns_rmdups.bw", norm_type=config['addtnl_bigwig_norms'], sample=samples['sample']) if isinstance(config['addtnl_bigwig_norms'], list) else [],
+        expand("analysis/deeptools_cov_rmdups_{norm_type}/{sample}_filt_alns_rmdups.bw", norm_type=config['addtnl_bigwig_norms'], sample=samples_no_controls['sample']) if isinstance(config['addtnl_bigwig_norms'], list) else [],
         expand("analysis/homer_find_motifs/{sample}/homerMotifs.all.motifs", sample=samples_no_controls["sample"]) if config['homer']['run'] else []#sample=samples[pd.notnull(samples['enriched_factor'])]['sample'])
 
 def get_orig_fastq(wildcards):
@@ -307,7 +307,7 @@ rule filt_bams:
     output:
         bam="analysis/filt_bams/{sample}_filt_alns.bam",
         bai="analysis/filt_bams/{sample}_filt_alns.bam.bai",
-        idxstat="analysis/filt_bams/{sample}_filt_alns.bam.idxstat"
+        idxstat="analysis/filt_bams/{sample}_filt_alns.bam.idxstat",
     log:
         stdout="logs/filt_bams/{sample}.o",
         stderr="logs/filt_bams/{sample}.e",
@@ -337,12 +337,41 @@ rule filt_bams:
 
         """
 
+rule dedup_bams:
+    """
+    Dedup BAMs.
+    """
+    input:
+        bam="analysis/filt_bams/{sample}_filt_alns.bam",
+        bai="analysis/filt_bams/{sample}_filt_alns.bam.bai",
+    output:
+        dedup_bam=temp("analysis/dedup_bams/{sample}_filt_alns.dedup.bam"),
+        dedup_bai="analysis/dedup_bams/{sample}_filt_alns.dedup.bam.bai",
+        flagstat="analysis/dedup_bams/{sample}_filt_alns.dedup.bam.flagstat",
+    log:
+        stdout="logs/dedup_bams/{sample}.o",
+        stderr="logs/dedup_bams/{sample}.e",
+    benchmark:
+        "benchmarks/dedup_bams/{sample}.txt"
+    params:
+    threads: 8
+    resources:
+        mem_gb=80
+    envmodules:
+        config['modules']['samtools']
+    shell:
+        """
+        samtools view -b -@ {threads} -F 1024 -o {output.dedup_bam} {input.bam}
+        samtools index {output.dedup_bam}
+        samtools flagstat -@ {threads} {output.dedup_bam} > {output.flagstat}
+        """
+
 rule filt_bams_nfr:
     """
     Keep only paired alignments with <150 bp fragment size.
     """
     input:
-        "analysis/filt_bams/{sample}_filt_alns.bam"
+        "analysis/dedup_bams/{sample}_filt_alns.dedup.bam"
     output:
         bam="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam",
         bai="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam.bai",
@@ -833,22 +862,21 @@ rule deeptools_fingerprint:
         """
 
 def get_macs2_bams(wildcards):
+    # pass deduped bams to macs2. Note that BAMs in 'filt_bams_nfr/' directory are deduped.
     if (config['atacseq'] and wildcards.macs2_type == "macs2_nfr"):
         macs2_bams = { 'trt': "analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam".format(sample=wildcards.sample) }
     elif (wildcards.macs2_type == "macs2"):
-        macs2_bams = { 'trt': "analysis/filt_bams/{sample}_filt_alns.bam".format(sample=wildcards.sample) }
+        macs2_bams = { 'trt': "analysis/dedup_bams/{sample}_filt_alns.dedup.bam".format(sample=wildcards.sample) }
     
     control = samples[samples['sample'] == wildcards.sample]['control'].values[0]
     
     if (not pd.isnull(control)):
-        macs2_bams['control'] = expand("analysis/filt_bams/{sample}_filt_alns.bam", sample = control.split(','))
+        macs2_bams['control'] = expand("analysis/dedup_bams/{sample}_filt_alns.dedup.bam", sample = control.split(','))
     return macs2_bams
 
 rule macs2:
     input:
         unpack(get_macs2_bams)
-        #trt="analysis/filt_bams/{sample}_filt_alns.bam",
-        #control=get_macs2_control,
     output:
         multiext("analysis/{macs2_type}/{sample}_macs2_broad_peaks", ".xls", ".broadPeak"),
         multiext("analysis/{macs2_type}/{sample}_macs2_narrow_peaks", ".xls", ".narrowPeak"),
@@ -886,7 +914,7 @@ rule macs2:
         -g {params.species} \
         -q {params.q_cutoff} \
         --broad \
-        --keep-dup 1 \
+        --keep-dup 'all' \
         --tempdir {params.temp_dir} 
 
         echo "END broad peak calling" 1>&2
@@ -901,7 +929,7 @@ rule macs2:
         -n {params.narrow_name} \
         -g {params.species} \
         -q {params.q_cutoff} \
-        --keep-dup 1 \
+        --keep-dup 'all' \
         --tempdir {params.temp_dir} 
 
         echo "END narrow peak calling" 1>&2
@@ -914,7 +942,7 @@ rule bamtobed:
     Dedup BAMs, name-sort and convert to BED for peak calling.
     """
     input:
-        "analysis/filt_bams/{sample}_filt_alns.bam"
+        "analysis/dedup_bams/{sample}_filt_alns.dedup.bam"
     output:
         bam=temp("analysis/bamtobed/{sample}_filt_alns.dedup.nmsort.bam"),
         bedpe="analysis/bamtobed/{sample}.bedpe.gz",
@@ -933,8 +961,8 @@ rule bamtobed:
         mem_gb=80
     shell:
         """
-        # dedup and name sort
-        samtools view -b -@ {threads} -F 1024 {input} | samtools sort -@ {threads} -n -o {output.bam}
+        # name sort BAMs
+        samtools sort -@ {threads} -n -o {output.bam} {input}
 
         # below adapted from https://github.com/ENCODE-DCC/atac-seq-pipeline/blob/master/src/encode_task_bam2ta.py (Latest commit 867cfe5)
         bedtools bamtobed -bedpe -mate1 -i {output.bam} | gzip -nc > {output.bedpe}
