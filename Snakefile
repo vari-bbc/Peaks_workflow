@@ -77,7 +77,7 @@ rule all:
         expand("analysis/filt_bams_nfr/CollectInsertSizeMetrics/{sample.sample}_filt_alns_nfr.insert_size_metrics.txt", sample=samples.itertuples()) if config['atacseq'] else [],
         "analysis/peaks_venn/report.html",
         "analysis/deeptools_heatmap_genes/genes.pdf",
-        expand("analysis/atacseqc/{sample}{suffix}", sample=samples_no_controls["sample"], suffix=["_tsse.rds","_tsse.pdf"]) if config['atacseq'] else [],
+        expand("analysis/atacseqc/{sample}{suffix}", sample=samples_no_controls["sample"], suffix=["_tsse.rds","_tsse.pdf"]) if config['atacseq'] and config['run_ATACseqQC'] else [],
         "analysis/deeptools_plotCorr/corr_ht.pdf",
         "analysis/deeptools_plotPCA/pca.pdf",
         expand("analysis/deeptools_cov_rmdups_{norm_type}/{sample}_filt_alns_rmdups.bw", norm_type=config['addtnl_bigwig_norms'], sample=samples['sample']) if isinstance(config['addtnl_bigwig_norms'], list) else [],
@@ -918,7 +918,7 @@ rule bamtobed:
     output:
         bam=temp("analysis/bamtobed/{sample}_filt_alns.dedup.nmsort.bam"),
         bedpe="analysis/bamtobed/{sample}.bedpe.gz",
-        bed="analysis/bamtobed/{sample}.bed"
+        bed="analysis/bamtobed/{sample}.bed.gz"
     log:
         stdout="logs/bamtobed/{sample}.o",
         stderr="logs/bamtobed/{sample}.e",
@@ -936,8 +936,7 @@ rule bamtobed:
         # dedup and name sort
         samtools view -b -@ {threads} -F 1024 {input} | samtools sort -@ {threads} -n -o {output.bam}
 
-        # below adapted from https://github.com/ENCODE-DCC/atac-seq-pipeline/blob/master/src/encode_task_bam2ta.py
-
+        # below adapted from https://github.com/ENCODE-DCC/atac-seq-pipeline/blob/master/src/encode_task_bam2ta.py (Latest commit 867cfe5)
         bedtools bamtobed -bedpe -mate1 -i {output.bam} | gzip -nc > {output.bedpe}
 
         zcat {output.bedpe} | awk 'BEGIN{{OFS="\\t"}}{{printf "%s\\t%s\\t%s\\tN\\t1000\\t%s\\n%s\\t%s\\t%s\\tN\\t1000\\t%s\\n",$1,$2,$3,$9,$4,$5,$6,$10}}' | gzip -nc > {output.bed}
@@ -950,7 +949,7 @@ rule macs2_ENCODE_atac:
     For ATAC-seq, use the ENCODE method of running MACS2 via -f BED. Specific MACS2 params copied from PEPATAC. Both ENCODE and PEPATAC run only in narrow mode, but we run also in broad mode here for now to make it easier to fit in with the existing parts in this specific workflow.
     """
     input:
-        trt="analysis/bamtobed/{sample}.bed",
+        trt="analysis/bamtobed/{sample}.bed.gz",
         chr_sizes="analysis/prep_chromsizes_file/chrom_sizes.tsv"
         #trt="analysis/filt_bams/{sample}_filt_alns.bam",
     output:
