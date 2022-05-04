@@ -20,13 +20,20 @@ top_modules:
         target: ''
         path_filters:
             - '*/filt_bams/*'
+    - samtools:
+        name: 'Samtools (post-filtering and deduped)'
+        info: 'Samtools after removing ChrM and retaining only mapped, primary, properly paired alignments and deduped.'
+        target: ''
+        path_filters:
+            - '*/dedup_bams/*'
     - picard:
         name: 'Picard (pre-filtering)'
+        info: 'Picard metrics; Recall that Picard removes duplicates by default for insert size distribution.'
         path_filters:
             - '*/bwamem/*'
     - picard:
         name: 'Picard (post-filtering)'
-        info: 'Picard metrics after removing ChrM and retaining only mapped, primary, properly paired alignments.'
+        info: 'Picard metrics after removing ChrM and retaining only mapped, primary, properly paired alignments. Recall that Picard removes duplicates by default for insert size distribution.'
         target: ''
         path_filters:
             - '*/filt_bams/*'

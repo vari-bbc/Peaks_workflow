@@ -347,7 +347,6 @@ rule dedup_bams:
     output:
         dedup_bam=temp("analysis/dedup_bams/{sample}_filt_alns.dedup.bam"),
         dedup_bai="analysis/dedup_bams/{sample}_filt_alns.dedup.bam.bai",
-        flagstat="analysis/dedup_bams/{sample}_filt_alns.dedup.bam.flagstat",
     log:
         stdout="logs/dedup_bams/{sample}.o",
         stderr="logs/dedup_bams/{sample}.e",
@@ -363,7 +362,6 @@ rule dedup_bams:
         """
         samtools view -b -@ {threads} -F 1024 -o {output.dedup_bam} {input.bam}
         samtools index {output.dedup_bam}
-        samtools flagstat -@ {threads} {output.dedup_bam} > {output.flagstat}
         """
 
 rule filt_bams_nfr:
@@ -1426,6 +1424,7 @@ rule multiqc:
         expand("analysis/filt_bams/{sample.sample}_filt_alns.bam.idxstat", sample=samples.itertuples()),
         expand("analysis/filt_bams/flagstat/{sample.sample}_filt_alns.flagstat", sample=samples.itertuples()),
         expand("analysis/filt_bams/CollectInsertSizeMetrics/{sample.sample}_filt_alns.insert_size_metrics.txt", sample=samples[samples['se_or_pe']=="PE"].itertuples()),
+        expand("analysis/dedup_bams/flagstat/{sample.sample}_filt_alns.dedup.flagstat", sample=samples.itertuples()),
         expand("analysis/bwamem/CollectAlignmentSummaryMetrics/{sample.sample}.aln_metrics.txt", sample=samples.itertuples()),
         expand("analysis/bwamem/{sample.sample}.samblaster.e", sample=samples.itertuples()),
         expand("analysis/fastq_screen/{sample.sample}_R1_screen.html", sample=samples.itertuples()),
@@ -1452,6 +1451,7 @@ rule multiqc:
         "analysis/bwamem/CollectAlignmentSummaryMetrics/",
         "analysis/filt_bams/",
         "analysis/filt_bams/flagstat/",
+        "analysis/dedup_bams/flagstat/",
         "analysis/deeptools_plotenrichment/"],
         PE_dirs=["analysis/filt_bams/CollectInsertSizeMetrics/"] if not all(x == "SE" for x in samples['se_or_pe'].values)  else [],
         outfile="multiqc_report"
