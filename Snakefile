@@ -719,8 +719,7 @@ rule merge_bigwigs:
         bigwigs=lambda wildcards: expand("analysis/deeptools_cov_rmdups/{sample}_filt_alns_rmdups.bw", sample=samples[samples['sample_group']==wildcards.group]['sample']),
         chromsizes="analysis/prep_chromsizes_file/chrom_sizes.tsv"
     output:
-        bedgraph=temp("analysis/merge_bigwigs/{group}.bedGraph"),
-        sorted_bg=temp("analysis/merge_bigwigs/{group}.sort.bedGraph"),
+        wig=temp("analysis/merge_bigwigs/{group}.wig"),
         bigwig="analysis/merge_bigwigs/{group}.bw"
     log:
         stdout="logs/merge_bigwigs/{group}.o",
@@ -731,26 +730,23 @@ rule merge_bigwigs:
         lambda wildcards, input, output:
         ("""
         # sum bigwigs at each interval
-        bigWigMerge {in_bw} {out_bg}
-
-        sort -k1,1 -k2,2n {out_bg} > {out_sorted_bg}
+        wiggletools mean {in_bw} > {out_wig}
 
         # convert to bigwig
-        bedGraphToBigWig {out_sorted_bg} {in_chroms} {out_bw}
+        wigToBigWig {out_wig} {in_chroms} {out_bw}
 
         """ if len(input.bigwigs) > 1 else """
-        ln -rs {in_bw} {out_bg} # placeholder file. Will be removed
-        ln -rs {in_bw} {out_sorted_bg} # placeolder file. Will be removed
+        ln -rs {in_bw} {out_wig} # placeholder file. Will be removed
         ln -rs {in_bw} {out_bw}
 
         """).format(in_bw=input.bigwigs,
-                   out_bg=output.bedgraph,
-                   out_sorted_bg=output.sorted_bg,
+                   out_wig=output.wig,
                    out_bw=output.bigwig,
                    in_chroms=input.chromsizes)
     threads: 8
     envmodules:
-        config['modules']['ucsc']
+        config['modules']['ucsc'],
+        config['modules']['WiggleTools']
     resources:
         mem_gb=96
     shell:
@@ -779,7 +775,7 @@ rule deeptools_heatmap_genes:
         binsize=bamCoverage_binsize,
         samp_labels=lambda wildcards, input: " ".join(os.path.basename(x).replace(".bw", "") for x in input.bw),
         temp="analysis/deeptools_heatmap_genes/ht_tmp",
-        yaxislabel='"Sum CPMs"',
+        yaxislabel='"Mean CPMs"',
         blacklist=blacklist,
     threads: 16
     resources:
