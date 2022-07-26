@@ -33,8 +33,8 @@ chroms_no_mito = ' '.join(fai_parsed[fai_parsed['chr'] != mito_chrom]['chr'].val
 #chroms_gt_cutoff = ' '.join(fai_parsed[fai_parsed['len'] > chrom_min_bp]['chr'].values)
 
 ##### load config and sample sheets #####
-
-units = pd.read_table("bin/samples.tsv", dtype={"sample" : str, "sample_group" : str })
+samplesheet="bin/samples.tsv"
+units = pd.read_table(samplesheet, dtype={"sample" : str, "sample_group" : str })
 units['se_or_pe'] = ["SE" if x else "PE" for x in units['fq2'].isnull()]
 
 samples = units[["sample","control","sample_group","enriched_factor","se_or_pe"]].drop_duplicates()
@@ -81,7 +81,8 @@ rule all:
         "analysis/deeptools_plotCorr/corr_ht.pdf",
         "analysis/deeptools_plotPCA/pca.pdf",
         expand("analysis/deeptools_cov_rmdups_{norm_type}/{sample}_filt_alns_rmdups.bw", norm_type=config['addtnl_bigwig_norms'], sample=samples_no_controls['sample']) if isinstance(config['addtnl_bigwig_norms'], list) else [],
-        expand("analysis/homer_find_motifs/{sample}/homerMotifs.all.motifs", sample=samples_no_controls["sample"]) if config['homer']['run'] else []#sample=samples[pd.notnull(samples['enriched_factor'])]['sample'])
+        expand("analysis/homer_find_motifs/{sample}/homerMotifs.all.motifs", sample=samples_no_controls["sample"]) if config['homer']['run'] else [], #sample=samples[pd.notnull(samples['enriched_factor'])]['sample'])
+        "analysis/diffbind_count"
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -1189,6 +1190,28 @@ rule rm_blacklist_peaks:
 #        return("analysis/macs2/{sample}_macs2_narrow_peaks.narrowPeak")
 #    elif frip_peakset=="broad":
 #        return("analysis/macs2/{sample}_macs2_broad_peaks.broadPeak")
+
+rule diffbind_count:
+    input:
+        samplesheet=samplesheet,
+    output:
+        outdir=directory("analysis/diffbind_count"),
+        samplesheet="analysis/diffbind_count/DB_samplesheet.tsv"
+    log:
+        stdout="logs/diffbind_count/out.o",
+        stderr="logs/diffbind_count/err.e",
+    benchmark:
+        "benchmarks/diffbind_count/bench.txt"
+    params:
+        DB_summits=200
+    threads: 16
+    resources:
+        mem_gb=96
+    envmodules:
+        config['modules']['R']
+    script:
+        "bin/scripts/diffbind_count.R"
+
 
 rule homer_find_motif:
     input:
