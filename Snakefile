@@ -1194,6 +1194,9 @@ rule rm_blacklist_peaks:
 rule diffbind_count:
     input:
         samplesheet=samplesheet,
+        bams=expand("analysis/filt_bams/{sample}_filt_alns.bam", sample=samples['sample']),
+        peaks=expand("analysis/macs2/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples_no_controls['sample']),
+
     output:
         outdir=directory("analysis/diffbind_count"),
         samplesheet="analysis/diffbind_count/DB_samplesheet.tsv"
