@@ -1206,7 +1206,7 @@ rule diffbind_count:
     benchmark:
         "benchmarks/diffbind_count/bench.txt"
     params:
-        DB_summits=200
+        DB_summits=config['DiffBind']['summits'] 
     threads: 16
     resources:
         mem_gb=96

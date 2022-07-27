@@ -1,12 +1,12 @@
 # path or URL to sample sheet (TSV format, columns: sample, condition, ...)
 ref:
   # path/to/reference/gDNA.fasta
-  sequence:       /varidata/research/projects/bbc/versioned_references/2022-03-08_14.47.50_v9/data/mm10_gencode_plus_e.coli-K12-mg1665_ensembl/sequence/mm10_gencode_plus_e.coli-K12-mg1665_ensembl.fa
-  fai:            /varidata/research/projects/bbc/versioned_references/2022-03-08_14.47.50_v9/data/mm10_gencode_plus_e.coli-K12-mg1665_ensembl/sequence/mm10_gencode_plus_e.coli-K12-mg1665_ensembl.fa.fai
+  sequence:       /varidata/research/projects/bbc/versioned_references/2022-03-08_14.47.50_v9/data/mm10_gencode/sequence/mm10_gencode.fa
+  fai:            /varidata/research/projects/bbc/versioned_references/2022-03-08_14.47.50_v9/data/mm10_gencode/sequence/mm10_gencode.fa.fai
   # path/to/bwa/index/directory
-  index:          /varidata/research/projects/bbc/versioned_references/2022-03-08_14.47.50_v9/data/mm10_gencode_plus_e.coli-K12-mg1665_ensembl/indexes/bwa/mm10_gencode_plus_e.coli-K12-mg1665_ensembl
+  index:          /varidata/research/projects/bbc/versioned_references/2022-03-08_14.47.50_v9/data/mm10_gencode/indexes/bwa/mm10_gencode
   # path/to/gtf/file/with/transcripts.gtf
-  annotation:     /varidata/research/projects/bbc/versioned_references/2022-03-08_14.47.50_v9/data/mm10_gencode_plus_e.coli-K12-mg1665_ensembl/annotation/mm10_gencode_plus_e.coli-K12-mg1665_ensembl.gtf
+  annotation:     /varidata/research/projects/bbc/versioned_references/2022-03-08_14.47.50_v9/data/mm10_gencode/annotation/mm10_gencode.gtf
   # ENCODE blacklist
   blacklist:      /varidata/research/projects/bbc/versioned_references/2022-03-08_14.47.50_v9/data/mm10_gencode/blacklist/mm10_encode_v2.bed
   # space-delimited chroms to keep.
@@ -19,9 +19,9 @@ ref:
 
 # comment out what is not needed in 'addtnl_bigwig_norms'. These are additional approaches to normalize the BigWigs. 'ecoli' is for CutnRun or CutnTag protocols.
 addtnl_bigwig_norms:
-    - 'csaw_bkgd'
-    - 'csaw_hiAbund'
-    - 'ecoli'
+    #- 'csaw_bkgd'
+    #- 'csaw_hiAbund'
+    #- 'ecoli'
 
 ecoli_chrom: "ec_Chromosome" # used for normalization if requested
 
@@ -32,6 +32,9 @@ run_hmmratac: false # Does not matter unless atacseq==true. This option provided
 
 macs2:
   gsize: "mm"
+
+DiffBind:
+  summits: 200 # 100 recommended for ATAC by DiffBind author (https://rdrr.io/bioc/DiffBind/man/DiffBind3.html).
 
 homer:
   run: False

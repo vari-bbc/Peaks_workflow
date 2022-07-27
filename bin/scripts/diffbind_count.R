@@ -47,9 +47,12 @@ for(out_pref in unique(samples$out_pref)){
 
     # make DBA object
     diffbind <- dba(sampleSheet = curr_samps)
+    
+    # set num cores and how many reads to store in memory
+    diffbind$config$cores <- db_config$cores
+    diffbind$config$yieldSize <- 200000000
 
     # get counts
-    diffbind$config$cores <- db_config$cores
     diffbind$config$scanbamparam <- ScanBamParam(flag = scanBamFlag(isDuplicate=FALSE, isSecondaryAlignment=FALSE, isSupplementaryAlignment=FALSE, isPaired=TRUE, isProperPair=TRUE, isNotPassingQualityControls=FALSE, isUnmappedQuery=FALSE, hasUnmappedMate=FALSE, isMinusStrand=NA, isMateMinusStrand=NA))
 
     diffbind <- dba.count(diffbind, summits=DB_summits, bUseSummarizeOverlaps = TRUE, bParallel = TRUE)
