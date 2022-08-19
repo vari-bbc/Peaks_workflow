@@ -1209,7 +1209,7 @@ rule diffbind_count:
         DB_summits=config['DiffBind']['summits'] 
     threads: 16
     resources:
-        mem_gb=96
+        mem_gb=196
     envmodules:
         config['modules']['R']
     script:
