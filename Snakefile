@@ -39,11 +39,12 @@ units['se_or_pe'] = ["SE" if x else "PE" for x in units['fq2'].isnull()]
 
 samples = units[["sample","control","sample_group","enriched_factor","se_or_pe"]].drop_duplicates()
 if not samples['sample'].is_unique:
-    raise Exception('A sample has more than one combination of control, smaple_group, enriched_factor, and/or se_or_pe.')
+    raise Exception('A sample has more than one combination of control, sample_group, enriched_factor, and/or se_or_pe.')
 
 # Filter for sample rows that are not controls
 controls_list = list(itertools.chain.from_iterable( [x.split(',') for x in samples['control'].values if not pd.isnull(x)] ))
 samples_no_controls = samples[-samples['sample'].isin(controls_list)]
+samples_no_controls["enriched_factor"]=samples_no_controls["enriched_factor"].fillna("peaks")
 
 # if SE data, make sure it is not ATACseq
 if (config['atacseq'] and units['fq2'].isnull().any()):
@@ -82,7 +83,7 @@ rule all:
         "analysis/deeptools_plotPCA/pca.pdf",
         expand("analysis/deeptools_cov_rmdups_{norm_type}/{sample}_filt_alns_rmdups.bw", norm_type=config['addtnl_bigwig_norms'], sample=samples_no_controls['sample']) if isinstance(config['addtnl_bigwig_norms'], list) else [],
         expand("analysis/homer_find_motifs/{sample}/homerMotifs.all.motifs", sample=samples_no_controls["sample"]) if config['homer']['run'] else [], #sample=samples[pd.notnull(samples['enriched_factor'])]['sample'])
-        "analysis/diffbind_count"
+        expand("analysis/diffbind_count/{factor}.rds", factor=pd.unique(samples_no_controls["enriched_factor"]))
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -464,7 +465,7 @@ rule get_std_chrom_names:
 
 rule csaw_norm_factors:
     input:
-        bams=lambda wildcards: expand("analysis/filt_bams/{sample}_filt_alns.bam", sample=samples[samples['enriched_factor']==wildcards.enriched_factor]['sample']),
+        bams=lambda wildcards: expand("analysis/filt_bams/{sample}_filt_alns.bam", sample=samples_no_controls[samples_no_controls['enriched_factor']==wildcards.enriched_factor]['sample']),
         std_chroms="analysis/misc/std_chroms.txt"
     output:
         bkgrd="analysis/bigwig_norm_factors/{enriched_factor}_csaw_bkgd.tsv", 
@@ -479,7 +480,7 @@ rule csaw_norm_factors:
         mito_chr=mito_chrom,
         blacklist=config['ref']['blacklist'],
         out_pref="analysis/bigwig_norm_factors/{enriched_factor}",
-        bam_samp_names=lambda wildcards: samples[samples['enriched_factor']==wildcards.enriched_factor]['sample']
+        bam_samp_names=lambda wildcards: samples_no_controls[samples_no_controls['enriched_factor']==wildcards.enriched_factor]['sample']
     threads: 8
     resources:
         mem_gb=120
@@ -1198,15 +1199,18 @@ rule diffbind_count:
         peaks=expand("analysis/macs2/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples_no_controls['sample']),
 
     output:
-        outdir=directory("analysis/diffbind_count"),
-        samplesheet="analysis/diffbind_count/DB_samplesheet.tsv"
+        outrds="analysis/diffbind_count/{enriched_factor}.rds",
+        samplesheet="analysis/diffbind_count/{enriched_factor}_DB_samplesheet.tsv"
     log:
-        stdout="logs/diffbind_count/out.o",
-        stderr="logs/diffbind_count/err.e",
+        stdout="logs/diffbind_count/{enriched_factor}.o",
+        stderr="logs/diffbind_count/{enriched_factor}.e",
     benchmark:
-        "benchmarks/diffbind_count/bench.txt"
+        "benchmarks/diffbind_count/{enriched_factor}.txt"
     params:
-        DB_summits=config['DiffBind']['summits'] 
+        outdir="analysis/diffbind_count/",
+        DB_summits=config['DiffBind']['summits'],
+        enriched_factor="{enriched_factor}",
+        macs2_type="macs2" if not config['atacseq'] else "macs2_ENCODE_atac"
     threads: 16
     resources:
         mem_gb=196
