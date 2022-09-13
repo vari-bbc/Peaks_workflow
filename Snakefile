@@ -1210,6 +1210,7 @@ rule diffbind_count:
         outdir="analysis/diffbind_count/",
         DB_summits=config['DiffBind']['summits'],
         enriched_factor="{enriched_factor}",
+        subtract_controls=config['DiffBind']['subtract_controls'],
         macs2_type="macs2" if not config['atacseq'] else "macs2_ENCODE_atac"
     threads: 16
     resources:

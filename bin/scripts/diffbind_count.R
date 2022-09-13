@@ -15,6 +15,7 @@ out_dir <- snakemake@params[["outdir"]]
 out_samplesheet <- snakemake@output[['samplesheet']]
 DB_summits <- snakemake@params[['DB_summits']]
 macs2_type <- snakemake@params[['macs2_type']]
+subtract_controls <- as.logical(snakemake@params[['subtract_controls']])
 curr_enriched_factor <- snakemake@params[['enriched_factor']]
 
 # set up Diffbind samplesheet
@@ -38,6 +39,11 @@ if(any(!is.na(samples$bamControl))){
 # filter for just the samples related to the current enriched factor
 stopifnot(curr_enriched_factor %in% samples$out_pref)
 samples <- samples %>% dplyr::filter(out_pref == curr_enriched_factor)
+
+# subtract controls?
+if (!subtract_controls){
+    samples$bamControl <- NA
+}
 
 write_tsv(samples, out_samplesheet)
 

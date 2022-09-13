@@ -35,6 +35,7 @@ macs2:
 
 DiffBind:
   summits: 200 # 100 recommended for ATAC by DiffBind author (https://rdrr.io/bioc/DiffBind/man/DiffBind3.html).
+  subtract_controls: True
 
 homer:
   run: False
