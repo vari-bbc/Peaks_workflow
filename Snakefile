@@ -43,7 +43,7 @@ if not samples['sample'].is_unique:
 
 # Filter for sample rows that are not controls
 controls_list = list(itertools.chain.from_iterable( [x.split(',') for x in samples['control'].values if not pd.isnull(x)] ))
-samples_no_controls = samples[-samples['sample'].isin(controls_list)]
+samples_no_controls = samples[-samples['sample'].isin(controls_list)].copy()
 samples_no_controls["enriched_factor"]=samples_no_controls["enriched_factor"].fillna("peaks")
 
 # if SE data, make sure it is not ATACseq
