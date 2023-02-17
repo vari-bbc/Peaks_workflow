@@ -37,8 +37,10 @@ DiffBind:
   summits: 200 # 100 recommended for ATAC by DiffBind author (https://rdrr.io/bioc/DiffBind/man/DiffBind3.html).
   subtract_controls: True
 
+csaw:
+  win_width: 150 # for TFs use 10-20bp
 homer:
-  run: False
+  run: True
   genome: "mm10" # mm10 and hg38 should be preconfigured; can also be a genome fasta file, but Homer will write to the parent directory of the file, so don't use a versioned_references file directly...symlink to a custom directory should be ok. 
   size: 200
 

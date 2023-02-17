@@ -38,7 +38,7 @@ filt_small_wins_rds <- paste0(snakemake@params[["out_pref"]], "_filt_small_wins.
 
 # csaw params
 bkgd_bin_width <- 10000
-hi_abund_win_width <- 150
+hi_abund_win_width <- snakemake@params[["window_width"]]
 win_filter_fold <- 3 # fold change from background to keep as high abundance windows
 minq <- 20
 dedup=TRUE

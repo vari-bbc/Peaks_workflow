@@ -481,7 +481,8 @@ rule csaw_norm_factors:
         mito_chr=mito_chrom,
         blacklist=config['ref']['blacklist'],
         out_pref="analysis/bigwig_norm_factors/{enriched_factor}",
-        bam_samp_names=lambda wildcards: samples_no_controls[samples_no_controls['enriched_factor']==wildcards.enriched_factor]['sample']
+        bam_samp_names=lambda wildcards: samples_no_controls[samples_no_controls['enriched_factor']==wildcards.enriched_factor]['sample'],
+        window_width=config['csaw']['win_width']
     threads: 8
     resources:
         mem_gb=120
