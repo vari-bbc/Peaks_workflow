@@ -62,7 +62,7 @@ modules:
   multiqc: bbc/multiqc/multiqc-1.9
   preseq: bbc/preseq/preseq-2.0.3
   qualimap: bbc/qualimap/qualimap_v.2.2.2
-  R: bbc/R/R-4.1.0-setR_LIBS_USER
+  R: bbc/R/alt2/R-4.2.1-setR_LIBS_USER_kin
   samblaster: bbc/samblaster/samblaster-0.1.24
   samtools: bbc/samtools/samtools-1.9
   trim_galore: bbc/trim_galore/trim_galore-0.6.0
