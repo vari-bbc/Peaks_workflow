@@ -83,7 +83,7 @@ rule all:
         "analysis/deeptools_plotPCA/pca.pdf",
         expand("analysis/deeptools_cov_rmdups_{norm_type}/{sample}_filt_alns_rmdups.bw", norm_type=config['addtnl_bigwig_norms'], sample=samples_no_controls['sample']) if isinstance(config['addtnl_bigwig_norms'], list) else [],
         expand("analysis/homer_find_motifs/{sample}/homerMotifs.all.motifs", sample=samples_no_controls["sample"]) if config['homer']['run'] else [], #sample=samples[pd.notnull(samples['enriched_factor'])]['sample'])
-        expand("analysis/bigwig_norm_factors/{enriched_factor}_{obj_nm}.rds", obj_nm=['binned','small_wins','filt_small_wins'], enriched_factor=pd.unique(samples['enriched_factor'])),
+        expand("analysis/bigwig_norm_factors/{enriched_factor}_{obj_nm}.rds", obj_nm=['binned','small_wins','filt_small_wins'], enriched_factor=pd.unique(samples_no_controls['enriched_factor'])),
         expand("analysis/diffbind_count/{factor}.rds", factor=pd.unique(samples_no_controls["enriched_factor"]))
 
 def get_orig_fastq(wildcards):
@@ -1198,6 +1198,7 @@ rule diffbind_count:
     input:
         samplesheet=samplesheet,
         bams=expand("analysis/filt_bams/{sample}_filt_alns.bam", sample=samples['sample']),
+        atac_beds=expand("analysis/bamtobed/{sample}.bed.gz", sample=samples_no_controls['sample']) if config['atacseq'] else [],
         peaks=expand("analysis/macs2/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples_no_controls['sample']),
 
     output:
@@ -1213,7 +1214,8 @@ rule diffbind_count:
         DB_summits=config['DiffBind']['summits'],
         enriched_factor="{enriched_factor}",
         subtract_controls=config['DiffBind']['subtract_controls'],
-        macs2_type="macs2" if not config['atacseq'] else "macs2_ENCODE_atac"
+        macs2_type="macs2" if not config['atacseq'] else "macs2_ENCODE_atac",
+        is_atac=config['atacseq']
     threads: 16
     resources:
         mem_gb=196

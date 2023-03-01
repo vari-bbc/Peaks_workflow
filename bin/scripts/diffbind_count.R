@@ -17,12 +17,18 @@ DB_summits <- snakemake@params[['DB_summits']]
 macs2_type <- snakemake@params[['macs2_type']]
 subtract_controls <- as.logical(snakemake@params[['subtract_controls']])
 curr_enriched_factor <- snakemake@params[['enriched_factor']]
+is_atac <- as.logical(snakemake@params[['is_atac']])
 
 # set up Diffbind samplesheet
+if (is_atac){
+    bam_reads_column <- "analysis/bamtobed/{sample}.bed.gz" 
+} else{
+    bam_reads_column <- "analysis/filt_bams/{sample}_filt_alns.bam"
+}
 samples <- read_tsv(samplesheet) %>%
         dplyr::mutate(SampleID=sample, 
-                      bamReads=str_glue("analysis/filt_bams/{sample}_filt_alns.bam"), 
-                      bamControl=ifelse(!is.na(control), str_glue("analysis/filt_bams/{control}_filt_alns.bam"), NA),
+                      bamReads=str_glue(bam_reads_column), 
+                      bamControl=ifelse(!is.na(control) & !is_atac, str_glue("analysis/filt_bams/{control}_filt_alns.bam"), NA), # typically there is no control for ATAC-seq datasets
                       Peaks=str_glue("analysis/{macs2_type}/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak"),
                       PeakCaller="bed",
                       Factor=sample_group,
