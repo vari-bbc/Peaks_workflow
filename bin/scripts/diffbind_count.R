@@ -20,14 +20,9 @@ curr_enriched_factor <- snakemake@params[['enriched_factor']]
 is_atac <- as.logical(snakemake@params[['is_atac']])
 
 # set up Diffbind samplesheet
-if (is_atac){
-    bam_reads_column <- "analysis/bamtobed/{sample}.bed.gz" 
-} else{
-    bam_reads_column <- "analysis/filt_bams/{sample}_filt_alns.bam"
-}
 samples <- read_tsv(samplesheet) %>%
         dplyr::mutate(SampleID=sample, 
-                      bamReads=str_glue(bam_reads_column), 
+                      bamReads=str_glue("analysis/filt_bams/{sample}_filt_alns.bam"), 
                       bamControl=ifelse(!is.na(control) & !is_atac, str_glue("analysis/filt_bams/{control}_filt_alns.bam"), NA), # typically there is no control for ATAC-seq datasets
                       Peaks=str_glue("analysis/{macs2_type}/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak"),
                       PeakCaller="bed",
@@ -61,11 +56,15 @@ message(str_glue("Making DBA for {curr_enriched_factor}"))
 diffbind <- dba(sampleSheet = samples %>% dplyr::select(-out_pref))
 
 # set num cores and how many reads to store in memory
-diffbind$config$cores <- db_config$cores
-diffbind$config$yieldSize <- 200000000
+diffbind$config$cores <- db_config$cores-1
+diffbind$config$yieldSize <- 20000000
 
 # get counts
 diffbind$config$scanbamparam <- ScanBamParam(flag = scanBamFlag(isDuplicate=FALSE, isSecondaryAlignment=FALSE, isSupplementaryAlignment=FALSE, isPaired=TRUE, isProperPair=TRUE, isNotPassingQualityControls=FALSE, isUnmappedQuery=FALSE, hasUnmappedMate=FALSE, isMinusStrand=NA, isMateMinusStrand=NA))
+
+if (is_atac){
+    diffbind$config$singleEnd <- TRUE # if ATAC, each read represents a cut site
+}
 
 diffbind <- dba.count(diffbind, summits=DB_summits, bUseSummarizeOverlaps = TRUE, bParallel = TRUE)
 print(diffbind)

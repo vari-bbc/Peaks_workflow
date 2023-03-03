@@ -485,7 +485,7 @@ rule csaw_norm_factors:
         window_width=config['csaw']['win_width']
     threads: 8
     resources:
-        mem_gb=120
+        mem_gb=396
     envmodules:
         config['modules']['R']
     script:
@@ -1198,8 +1198,7 @@ rule diffbind_count:
     input:
         samplesheet=samplesheet,
         bams=expand("analysis/filt_bams/{sample}_filt_alns.bam", sample=samples['sample']),
-        atac_beds=expand("analysis/bamtobed/{sample}.bed.gz", sample=samples_no_controls['sample']) if config['atacseq'] else [],
-        peaks=expand("analysis/macs2/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples_no_controls['sample']),
+        peaks=lambda wildcards: expand("analysis/{peak_type}/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak", sample=samples_no_controls['sample'], peak_type="macs2_ENCODE_atac" if config['atacseq'] else "macs2"),
 
     output:
         outrds="analysis/diffbind_count/{enriched_factor}.rds",
@@ -1214,11 +1213,11 @@ rule diffbind_count:
         DB_summits=config['DiffBind']['summits'],
         enriched_factor="{enriched_factor}",
         subtract_controls=config['DiffBind']['subtract_controls'],
-        macs2_type="macs2" if not config['atacseq'] else "macs2_ENCODE_atac",
+        macs2_type="macs2_ENCODE_atac" if config['atacseq'] else "macs2",
         is_atac=config['atacseq']
-    threads: 16
+    threads: 8
     resources:
-        mem_gb=196
+        mem_gb=392
     envmodules:
         config['modules']['R']
     script:
