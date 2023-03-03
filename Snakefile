@@ -483,7 +483,7 @@ rule csaw_norm_factors:
         out_pref="analysis/bigwig_norm_factors/{enriched_factor}",
         bam_samp_names=lambda wildcards: samples_no_controls[samples_no_controls['enriched_factor']==wildcards.enriched_factor]['sample'],
         window_width=config['csaw']['win_width']
-    threads: 8
+    threads: 16
     resources:
         mem_gb=396
     envmodules:
@@ -1215,7 +1215,7 @@ rule diffbind_count:
         subtract_controls=config['DiffBind']['subtract_controls'],
         macs2_type="macs2_ENCODE_atac" if config['atacseq'] else "macs2",
         is_atac=config['atacseq']
-    threads: 8
+    threads: 16
     resources:
         mem_gb=392
     envmodules:

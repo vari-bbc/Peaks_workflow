@@ -11,7 +11,7 @@ outCompNorm <- snakemake@output[["bkgrd"]]
 outEffNorm <- snakemake@output[["hiAbund"]]
 
 # cores for parallel processing
-bp_cores <- snakemake@threads 
+bp_cores <- snakemake@threads-1 
 
 # read in mitochondrial chromosome name
 mito_chr <- snakemake@params[["mito_chr"]]
