@@ -101,15 +101,13 @@ rule rename_fastqs:
         get_orig_fastq
     output:
         "analysis/renamed_data/{sample}_{read}.fastq.gz"
-    log:
-        stdout="logs/rename_fastqs/{sample}_{read}.o",
-        stderr="logs/rename_fastqs/{sample}_{read}.e",
     benchmark:
         "benchmarks/rename_fastqs/{sample}_{read}.txt"
     params:
     threads: 1
     resources:
-        mem_gb=8
+        mem_gb=8,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     envmodules:
     shell:
         """
@@ -133,16 +131,14 @@ rule fastqc:
         zip="analysis/fastqc/{fq_pref}_fastqc.zip"
     params:
         outdir="analysis/fastqc/"
-    log:
-        stdout="logs/fastqc/{fq_pref}.o",
-        stderr="logs/fastqc/{fq_pref}.e"
     benchmark:
         "benchmarks/fastqc/{fq_pref}.txt"
     envmodules:
         config['modules']['fastqc']
     threads: 1
     resources:
-        mem_gb = 32
+        mem_gb = 32,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         fastqc --outdir {params.outdir} {input}
@@ -158,16 +154,14 @@ rule fastq_screen:
         html = "analysis/fastq_screen/{fq_pref}_screen.html",
         txt = "analysis/fastq_screen/{fq_pref}_screen.txt",
     params:
-    log:
-        stdout="logs/fastq_screen/{fq_pref}.o",
-        stderr="logs/fastq_screen/{fq_pref}.e"
     benchmark:
         "benchmarks/fastq_screen/{fq_pref}.txt"
     envmodules:
         config['modules']['fastq_screen']
     threads: 8
     resources:
-        mem_gb = 32
+        mem_gb = 32,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         fastq_screen --threads {threads} --outdir analysis/fastq_screen/ {input}
@@ -184,16 +178,14 @@ rule trim_galore_PE:
         expand("analysis/trim_galore/{{sample}}_R1{ext}", ext=[".fastq.gz_trimming_report.txt","_val_1_fastqc.html"]),
         expand("analysis/trim_galore/{{sample}}_R2{ext}", ext=[".fastq.gz_trimming_report.txt","_val_2_fastqc.html"]),
     params:
-    log:
-        stdout="logs/trim_galore/{sample}.o",
-        stderr="logs/trim_galore/{sample}.e"
     benchmark:
         "benchmarks/trim_galore/{sample}.txt"
     envmodules:
         config['modules']['trim_galore']
     threads: 4
     resources:
-        mem_gb = 64
+        mem_gb = 64,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         trim_galore --paired {input} --output_dir analysis/trim_galore/ --cores {threads} --fastqc
@@ -210,16 +202,14 @@ rule trim_galore_SE:
         "analysis/trim_galore/{sample}_R1.fastq.gz_trimming_report.txt",
         expand("analysis/trim_galore/{{sample}}_R1_trimmed_fastqc{ext}", ext=['.html','.zip']),
     params:
-    log:
-        stdout="logs/trim_galore/{sample}.o",
-        stderr="logs/trim_galore/{sample}.e"
     benchmark:
         "benchmarks/trim_galore/{sample}.txt"
     envmodules:
         config['modules']['trim_galore']
     threads: 4
     resources:
-        mem_gb = 64
+        mem_gb = 64,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         trim_galore {input} --output_dir analysis/trim_galore/ --cores {threads} --fastqc
@@ -233,9 +223,6 @@ rule bwamem:
         outbai="analysis/bwamem/{sample}.bam.bai",
         idxstat="analysis/bwamem/{sample}.bam.idxstat",
         samblaster_err="analysis/bwamem/{sample}.samblaster.e",
-    log:
-        stdout="logs/bwamem/{sample}.o",
-        stderr="logs/bwamem/{sample}.e",
     benchmark:
         "benchmarks/bwamem/{sample}.txt"
     params:
@@ -247,7 +234,8 @@ rule bwamem:
         config['modules']['samblaster'],
         config['modules']['samtools'],
     resources:
-        mem_gb=180
+        mem_gb=180,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         bwa mem \
@@ -282,9 +270,6 @@ rule atacseqc:
         bam="analysis/bwamem/{sample}.bam"
     output:
         expand("analysis/atacseqc/{{sample}}{suffix}", suffix=["_tsse.rds","_tsse.pdf"]),
-    log:
-        stdout="logs/atacseqc/{sample}.o",
-        stderr="logs/atacseqc/{sample}.e",
     benchmark:
         "benchmarks/atacseqc/{sample}.txt"
     params:
@@ -294,7 +279,8 @@ rule atacseqc:
     envmodules:
         "bbc/R/R-4.1.0-setR_LIBS_USER"
     resources:
-        mem_gb=96
+        mem_gb=96,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         Rscript --vanilla bin/atacseqqc.R {input.bam} {params.outpref} {params.knownGenesLib}
@@ -311,9 +297,6 @@ rule filt_bams:
         bam="analysis/filt_bams/{sample}_filt_alns.bam",
         bai="analysis/filt_bams/{sample}_filt_alns.bam.bai",
         idxstat="analysis/filt_bams/{sample}_filt_alns.bam.idxstat",
-    log:
-        stdout="logs/filt_bams/{sample}.o",
-        stderr="logs/filt_bams/{sample}.e",
     benchmark:
         "benchmarks/filt_bams/{sample}.txt"
     params:
@@ -323,7 +306,8 @@ rule filt_bams:
         keep_chroms = chroms_no_mito #chroms_gt_cutoff #chroms_no_mito if atacseq else ''
     threads: 8
     resources:
-        mem_gb=80
+        mem_gb=80,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     envmodules:
         config['modules']['samtools']
     shell:
@@ -350,15 +334,13 @@ rule dedup_bams:
     output:
         dedup_bam=temp("analysis/dedup_bams/{sample}_filt_alns.dedup.bam"),
         dedup_bai="analysis/dedup_bams/{sample}_filt_alns.dedup.bam.bai",
-    log:
-        stdout="logs/dedup_bams/{sample}.o",
-        stderr="logs/dedup_bams/{sample}.e",
     benchmark:
         "benchmarks/dedup_bams/{sample}.txt"
     params:
     threads: 8
     resources:
-        mem_gb=80
+        mem_gb=80,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     envmodules:
         config['modules']['samtools']
     shell:
@@ -378,9 +360,6 @@ rule filt_bams_nfr:
         bai="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam.bai",
         idxstat="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam.idxstat",
         #metrics="analysis/filt_bams_nfr/{sample}_filt_alns_nfr.bam.metrics"
-    log:
-        stdout="logs/filt_bams_nfr/{sample}.o",
-        stderr="logs/filt_bams_nfr/{sample}.e",
     benchmark:
         "benchmarks/filt_bams_nfr/{sample}.txt"
     params:
@@ -392,7 +371,8 @@ rule filt_bams_nfr:
         #config['modules']['deeptools'],
         config['modules']['samtools']
     resources:
-        mem_gb=80
+        mem_gb=80,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         export TMPDIR={params.temp}
@@ -410,9 +390,6 @@ rule deeptools_cov_rmdups:
         bam="analysis/filt_bams/{sample}_filt_alns.bam"
     output:
         bigwig_rmdups="analysis/deeptools_cov_rmdups/{sample}_filt_alns_rmdups.bw"
-    log:
-        stdout="logs/deeptools_cov_rmdups/{sample}.o",
-        stderr="logs/deeptools_cov_rmdups/{sample}.e"
     benchmark:
         "benchmarks/deeptools_cov_rmdups/{sample}.txt"
     params:
@@ -427,7 +404,8 @@ rule deeptools_cov_rmdups:
     envmodules:
         config['modules']['deeptools']
     resources:
-        mem_gb=96
+        mem_gb=96,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         export TMPDIR={params.temp}
@@ -449,16 +427,14 @@ rule get_std_chrom_names:
     input:
     output:
         "analysis/misc/std_chroms.txt"
-    log:
-        stdout="logs/get_std_chrom_names/out.o",
-        stderr="logs/get_std_chrom_names/err.e",
     benchmark:
         "benchmarks/get_std_chrom_names/bench.txt"
     params:
         ref_fasta=config["ref"]["sequence"],
     threads: 1
     resources:
-        mem_gb=20
+        mem_gb=20,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     envmodules:
         config['modules']['R']
     script:
@@ -472,9 +448,6 @@ rule csaw_norm_factors:
         bkgrd="analysis/bigwig_norm_factors/{enriched_factor}_csaw_bkgd.tsv", 
         hiAbund="analysis/bigwig_norm_factors/{enriched_factor}_csaw_hiAbund.tsv",
         rds=expand("analysis/bigwig_norm_factors/{{enriched_factor}}_{obj_nm}.rds", obj_nm=['binned','small_wins','filt_small_wins'])
-    log:
-        stdout="logs/csaw_norm_factors/{enriched_factor}.o",
-        stderr="logs/csaw_norm_factors/{enriched_factor}.e",
     benchmark:
         "benchmarks/csaw_norm_factors/{enriched_factor}.txt"
     params:
@@ -485,7 +458,8 @@ rule csaw_norm_factors:
         window_width=config['csaw']['win_width']
     threads: 16
     resources:
-        mem_gb=396
+        mem_gb=396,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     envmodules:
         config['modules']['R']
     script:
@@ -499,16 +473,14 @@ rule cutnrun_ecoli_scale_factors:
         bam=lambda wildcards: expand("analysis/filt_bams/{sample}_filt_alns.bam", sample=samples['sample']),
     output:
         "analysis/bigwig_norm_factors/cutnrun_ecoli_scale_factors.tsv"
-    log:
-        stdout="logs/cutnrun_ecoli_scale_factors/out.o",
-        stderr="logs/cutnrun_ecoli_scale_factors/err.e",
     benchmark:
         "benchmarks/cutnrun_ecoli_scale_factors/bench.txt"
     params:
         ecoli_chrom=config["ecoli_chrom"]
     threads: 8
     resources:
-        mem_gb=120
+        mem_gb=120,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     envmodules:
         config['modules']['samtools']
     shell:
@@ -546,9 +518,6 @@ rule alternate_norm_bigwigs:
         norm_factors=get_bigwig_norm_factors_file,
     output:
         bigwig_rmdups="analysis/deeptools_cov_rmdups_{norm_type}/{sample}_filt_alns_rmdups.bw"
-    log:
-        stdout="logs/deeptools_cov_rmdups_{norm_type}/{sample}.o",
-        stderr="logs/deeptools_cov_rmdups_{norm_type}/{sample}.e",
     benchmark:
         "benchmarks/deeptools_cov_rmdups_{norm_type}/{sample}.txt"
     params:
@@ -560,7 +529,8 @@ rule alternate_norm_bigwigs:
         temp="analysis/deeptools_cov_rmdups_{norm_type}/{sample}.tmp"
     threads: 8
     resources:
-        mem_gb=120
+        mem_gb=120,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     envmodules:
         config['modules']['deeptools']
     shell:
@@ -589,9 +559,6 @@ rule deeptools_multiBWsummary:
         peaks="analysis/merge_all_peaks/all_merged_{peak_type}.bed".format(peak_type="macs2_nfr_broad" if config['atacseq'] else "macs2_narrow")
     output:
         "analysis/deeptools_multiBWsummary/results.npz"
-    log:
-        stdout="logs/deeptools_multiBWsummary/out.o",
-        stderr="logs/deeptools_multiBWsummary/err.e"
     benchmark:
         "benchmarks/deeptools_multiBWsummary/bench.txt"
     params:
@@ -601,7 +568,8 @@ rule deeptools_multiBWsummary:
     envmodules:
         config['modules']['deeptools']
     resources:
-        mem_gb=96
+        mem_gb=96,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         export TMPDIR={params.temp}
@@ -615,9 +583,6 @@ rule deeptools_plotCorr:
         "analysis/deeptools_multiBWsummary/results.npz"
     output:
         pdf="analysis/deeptools_plotCorr/corr_ht.pdf"
-    log:
-        stdout="logs/deeptools_plotCorr/out.o",
-        stderr="logs/deeptools_plotCorr/err.e"
     benchmark:
         "benchmarks/deeptools_plotCorr/bench.txt"
     params:
@@ -626,7 +591,8 @@ rule deeptools_plotCorr:
     envmodules:
         config['modules']['deeptools']
     resources:
-        mem_gb=64
+        mem_gb=64,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         export TMPDIR={params.temp}
@@ -640,9 +606,6 @@ rule deeptools_plotPCA:
         "analysis/deeptools_multiBWsummary/results.npz"
     output:
         pdf="analysis/deeptools_plotPCA/pca.pdf"
-    log:
-        stdout="logs/deeptools_plotPCA/out.o",
-        stderr="logs/deeptools_plotPCA/err.e"
     benchmark:
         "benchmarks/deeptools_plotPCA/bench.txt"
     params:
@@ -651,7 +614,8 @@ rule deeptools_plotPCA:
     envmodules:
         config['modules']['deeptools']
     resources:
-        mem_gb=64
+        mem_gb=64,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         export TMPDIR={params.temp}
@@ -665,9 +629,6 @@ rule deeptools_bamcompare:
         bam2=lambda wildcards: "analysis/filt_bams/{control}_filt_alns.bam".format(control=samples[samples['sample']==wildcards.sample]['control'].values[0]),
     output:
         bigwig="analysis/deeptools_bamcompare/{sample}_vs_control_log2ratio.bw"
-    log:
-        stdout="logs/deeptools_bamcompare/{sample}.o",
-        stderr="logs/deeptools_bamcompare/{sample}.e"
     benchmark:
         "benchmarks/deeptools_bamcompare/{sample}.txt"
     params:
@@ -681,7 +642,8 @@ rule deeptools_bamcompare:
     envmodules:
         config['modules']['deeptools']
     resources:
-        mem_gb=96
+        mem_gb=96,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         export TMPDIR={params.temp}
@@ -702,15 +664,13 @@ rule prep_chromsizes_file:
         fai=config["ref"]["fai"]
     output:
         "analysis/prep_chromsizes_file/chrom_sizes.tsv"
-    log:
-        stdout="logs/prep_chromsizes_file/out.o",
-        stderr="logs/prep_chromsizes_file/err.e",
     benchmark:
         "benchmarks/prep_chromsizes_file/bench.txt"
     params:
     threads: 1
     resources:
-        mem_gb=8
+        mem_gb=8,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     envmodules:
     shell:
         """
@@ -725,9 +685,6 @@ rule merge_bigwigs:
     output:
         wig=temp("analysis/merge_bigwigs/{group}.wig"),
         bigwig="analysis/merge_bigwigs/{group}.bw"
-    log:
-        stdout="logs/merge_bigwigs/{group}.o",
-        stderr="logs/merge_bigwigs/{group}.e"
     benchmark:
         "benchmarks/merge_bigwigs/{group}.txt"
     params:
@@ -752,7 +709,8 @@ rule merge_bigwigs:
         config['modules']['ucsc'],
         config['modules']['WiggleTools']
     resources:
-        mem_gb=96
+        mem_gb=96,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         {params}
@@ -766,9 +724,6 @@ rule deeptools_heatmap_genes:
         compmat="analysis/deeptools_heatmap_genes/compmat.gz",
         compmatbed="analysis/deeptools_heatmap_genes/compmat.bed",
         heatmap="analysis/deeptools_heatmap_genes/genes.pdf"
-    log:
-        stdout="logs/deeptools_heatmap_genes/out.o",
-        stderr="logs/deeptools_heatmap_genes/err.e"
     benchmark:
         "benchmarks/deeptools_heatmap_genes/bench.txt"
     envmodules:
@@ -783,7 +738,8 @@ rule deeptools_heatmap_genes:
         blacklist=blacklist,
     threads: 16
     resources:
-        mem_gb=100
+        mem_gb=100,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         export TMPDIR={params.temp}
@@ -824,9 +780,6 @@ rule deeptools_fingerprint:
     output:
         plot="analysis/deeptools_fingerprint/fingerprint.pdf",
         rawcts="analysis/deeptools_fingerprint/fingerprint.rawcts"
-    log:
-        stdout="logs/deeptools_fingerprint/combined.o",
-        stderr="logs/deeptools_fingerprint/combined.e"
     benchmark:
         "benchmarks/deeptools_fingerprint/combined.txt"
     params:
@@ -841,7 +794,8 @@ rule deeptools_fingerprint:
     envmodules:
         config['modules']['deeptools']
     resources:
-        mem_gb=160
+        mem_gb=160,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         export TMPDIR={params.temp}
@@ -879,9 +833,6 @@ rule macs2:
         multiext("analysis/{macs2_type}/{sample}_macs2_broad_peaks", ".xls", ".broadPeak"),
         multiext("analysis/{macs2_type}/{sample}_macs2_narrow_peaks", ".xls", ".narrowPeak"),
         "analysis/{macs2_type}/{sample}_macs2_narrow_summits.bed",
-    log:
-        stdout="logs/{macs2_type}/{sample}.o",
-        stderr="logs/{macs2_type}/{sample}.e"
     benchmark:
         "benchmarks/{macs2_type}/{sample}.txt"
     params:
@@ -899,7 +850,8 @@ rule macs2:
         config['modules']['macs2']
     threads: 1
     resources:
-        mem_gb=100
+        mem_gb=100,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         macs2 \
@@ -945,9 +897,6 @@ rule bamtobed:
         bam=temp("analysis/bamtobed/{sample}_filt_alns.dedup.nmsort.bam"),
         bedpe="analysis/bamtobed/{sample}.bedpe.gz",
         bed="analysis/bamtobed/{sample}.bed.gz"
-    log:
-        stdout="logs/bamtobed/{sample}.o",
-        stderr="logs/bamtobed/{sample}.e",
     benchmark:
         "benchmarks/bamtobed/{sample}.txt"
     params:
@@ -956,7 +905,8 @@ rule bamtobed:
         config['modules']['samtools'],
         config['modules']['bedtools']
     resources:
-        mem_gb=80
+        mem_gb=80,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         # name sort BAMs
@@ -986,9 +936,6 @@ rule macs2_ENCODE_atac:
         narrow_bedgraph=temp("analysis/macs2_ENCODE_atac/{sample}_macs2_narrow_treat_pileup.bdg"),
         narrow_bedgraph_clip=temp("analysis/macs2_ENCODE_atac/{sample}_macs2_narrow_treat_pileup.clip.bdg"),
         narrow_bigwig="analysis/macs2_ENCODE_atac/{sample}_macs2_narrow_treat_pileup.bw"
-    log:
-        stdout="logs/macs2_ENCODE_atac/{sample}.o",
-        stderr="logs/macs2_ENCODE_atac/{sample}.e"
     benchmark:
         "benchmarks/macs2_ENCODE_atac/{sample}.txt"
     params:
@@ -1003,7 +950,8 @@ rule macs2_ENCODE_atac:
         config['modules']['ucsc']
     threads: 1
     resources:
-        mem_gb=100
+        mem_gb=100,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         # ENCODE uses -p 0.01 but we use -q 0.05 here to be consistent with the rest of this workflow
@@ -1067,9 +1015,6 @@ rule hmmratac:
         gappedpeak_filt_open="analysis/hmmratac/{sample}_peaks.filteredPeaks.openOnly.bed",
         summits="analysis/hmmratac/{sample}_summits.bed",
         summits_filt="analysis/hmmratac/{sample}.filteredSummits.bed"
-    log:
-        stdout="logs/hmmratac/{sample}.o",
-        stderr="logs/hmmratac/{sample}.e"
     benchmark:
         "benchmarks/hmmratac/{sample}.txt"
     envmodules:
@@ -1081,7 +1026,8 @@ rule hmmratac:
         blacklist=config["ref"]["blacklist"],
         mito_chr=config["ref"]["mito_chr"]
     resources:
-        mem_gb=120
+        mem_gb=120,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     threads: 8
     shell:
         """
@@ -1127,9 +1073,6 @@ rule merge_all_peaks:
         get_peaks_for_merging
     output:
         "analysis/merge_all_peaks/all_merged_{peak_type}.bed",
-    log:
-        stdout="logs/merge_all_peaks/{peak_type}.o",
-        stderr="logs/merge_all_peaks/{peak_type}.e"
     benchmark:
         "benchmarks/merge_all_peaks/{peak_type}.txt"
     params:
@@ -1137,7 +1080,8 @@ rule merge_all_peaks:
         config['modules']['bedops']
     threads: 4
     resources:
-        mem_gb=100
+        mem_gb=100,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         bedops --merge {input} 1> {output}
@@ -1157,9 +1101,6 @@ rule rm_blacklist_peaks:
         broad="analysis/{macs2_type}/rm_blacklist/{sample}_macs2_broad_peaks.rm_blacklist.broadPeak",
         narrow="analysis/{macs2_type}/rm_blacklist/{sample}_macs2_narrow_peaks.rm_blacklist.narrowPeak",
         narrow_summits="analysis/{macs2_type}/rm_blacklist/{sample}_macs2_narrow_summits.rm_blacklist.bed"
-    log:
-        stdout="logs/{macs2_type}/rm_blacklist/{sample}.o",
-        stderr="logs/{macs2_type}/rm_blacklist/{sample}.e"
     benchmark:
         "benchmarks/{macs2_type}/rm_blacklist/{sample}.txt"
     params:
@@ -1169,7 +1110,8 @@ rule rm_blacklist_peaks:
         config['modules']['R']
     threads: 4
     resources:
-        mem_gb=100
+        mem_gb=100,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         # below note the '||' condition for the grep statement that allows a return code of 0 even when no matches are found (as in the case of an empty bed file)
@@ -1203,9 +1145,6 @@ rule diffbind_count:
     output:
         outrds="analysis/diffbind_count/{enriched_factor}.rds",
         samplesheet="analysis/diffbind_count/{enriched_factor}_DB_samplesheet.tsv"
-    log:
-        stdout="logs/diffbind_count/{enriched_factor}.o",
-        stderr="logs/diffbind_count/{enriched_factor}.e",
     benchmark:
         "benchmarks/diffbind_count/{enriched_factor}.txt"
     params:
@@ -1217,7 +1156,8 @@ rule diffbind_count:
         is_atac=config['atacseq']
     threads: 16
     resources:
-        mem_gb=392
+        mem_gb=392,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     envmodules:
         config['modules']['R']
     script:
@@ -1229,9 +1169,6 @@ rule homer_find_motif:
         "analysis/macs2/rm_blacklist/{sample}_macs2_narrow_summits.rm_blacklist.bed"
     output:
         "analysis/homer_find_motifs/{sample}/homerMotifs.all.motifs"
-    log:
-        stdout="logs/homer_find_motif/{sample}.o",
-        stderr="logs/homer_find_motif/{sample}.e"
     benchmark:
         "benchmarks/homer_find_motif/{sample}.txt"
     params:
@@ -1242,7 +1179,8 @@ rule homer_find_motif:
     envmodules:
         "bbc/HOMER/HOMER-4.11.1"
     resources:
-        mem_gb=200
+        mem_gb=200,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         findMotifsGenome.pl {input} {params.genome} {params.outdir} \
@@ -1274,9 +1212,6 @@ rule peaks_venn:
         unpack(get_peaks_for_venn)
     output:
         "analysis/peaks_venn/report.html"
-    log:
-        stdout="logs/peaks_venn/out.o",
-        stderr="logs/peaks_venn/err.e"
     benchmark:
         "benchmarks/peaks_venn/benchmark.txt"
     params:
@@ -1286,7 +1221,8 @@ rule peaks_venn:
         config['modules']['R']
     threads: 1
     resources:
-        mem_gb = 60
+        mem_gb = 60,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     script:
         "bin/peaks_venn.Rmd"
 
@@ -1353,16 +1289,14 @@ rule rm_supplementary_alns:
     output:
         temp("analysis/rm_supplementary_alns/{bam_name}.F2304.bam")
     params:
-    log:
-        stdout="logs/rm_supplementary_alns/{bam_name}.o",
-        stderr="logs/rm_supplementary_alns/{bam_name}.e"
     benchmark:
         "benchmarks/rm_supplementary_alns/{bam_name}.txt"
     envmodules:
         config['modules']['samtools']
     threads: 8
     resources:
-        mem_gb = 32
+        mem_gb = 32,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         samtools view -@ {threads} -F 2304 -b -o {output} {input}
@@ -1377,9 +1311,6 @@ rule preseq_complexity:
     output:
         ccurve="analysis/preseq_complexity/{sample}.c_curve.txt",
         lcextrap="analysis/preseq_complexity/{sample}.lc_extrap.txt"
-    log:
-        stdout="logs/preseq_complexity/{sample}.o",
-        stderr="logs/preseq_complexity/{sample}.e"
     benchmark:
         "benchmarks/preseq_complexity/{sample}.txt"
     envmodules:
@@ -1387,7 +1318,8 @@ rule preseq_complexity:
     params:
         paired=lambda wildcards: "-P" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "",
     resources:
-        mem_gb=100
+        mem_gb=100,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     threads: 8
     shell:
         """
@@ -1423,16 +1355,14 @@ rule qualimap:
         "analysis/bwamem/{sample}.bam",
     output:
         touch("analysis/qualimap/{sample}/done")
-    log:
-        stdout="logs/qualimap/{sample}.o",
-        stderr="logs/qualimap/{sample}.e"
     benchmark:
         "benchmarks/qualimap/{sample}.txt"
     envmodules:
         config['modules']['qualimap']
     params:
     resources:
-        mem_gb=100
+        mem_gb=100,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     threads: 8
     shell:
         """
@@ -1463,9 +1393,6 @@ rule multiqc:
         expand("analysis/qualimap/{sample.sample}/done", sample=samples.itertuples()),
     output:
         "analysis/multiqc/multiqc_report.html",
-    log:
-        stdout="logs/multiqc/multiqc.o",
-        stderr="logs/multiqc/multiqc.e"
     benchmark:
         "benchmarks/multiqc/multiqc.txt"
     params:
@@ -1489,7 +1416,8 @@ rule multiqc:
         config['modules']['multiqc']
     threads: 4
     resources:
-        mem_gb=100
+        mem_gb=100,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         multiqc \
