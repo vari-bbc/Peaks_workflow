@@ -5,7 +5,7 @@ import re
 import itertools
 from snakemake.utils import validate, min_version
 ##### set minimum snakemake version #####
-min_version("6.15.0")
+min_version("7.25.0")
 
 ##### Editable variables #####
 

@@ -46,27 +46,27 @@ homer:
 
 gtf_for_tss_heatmap: /varidata/research/projects/bbc/versioned_references/2022-03-08_14.47.50_v9/data/mm10_gencode/annotation/mm10_gencode.basic.gtf
 
-shared_snakemake_repo: "/secondary/projects/bbc/research/shared_snakemake/"
+shared_snakemake_repo: "/varidata/research/projects/bbc/research/shared_snakemake/"
 
 atacseqc:
     known_genes_pkg: TxDb.Mmusculus.UCSC.mm10.knownGene
 
 modules:
-  bamtools: bbc/bamtools/bamtools-2.5.1
-  bedops: bbc/bedops/bedops-2.4.37
-  bedtools: bbc/bedtools/bedtools-2.29.2
-  bwa: bbc/bwa/bwa-0.7.17
-  deeptools: bbc/deeptools/deeptools-3.4.3
-  fastqc: bbc/fastqc/fastqc-0.11.9
-  fastq_screen: bbc/fastq_screen/fastq_screen-0.14.0
-  HMMRATAC: bbc/HMMRATAC/HMMRATAC-1.2.10
-  macs2: bbc/macs2/macs2-2.2.7.1
-  multiqc: bbc/multiqc/multiqc-1.9
-  preseq: bbc/preseq/preseq-2.0.3
-  qualimap: bbc/qualimap/qualimap_v.2.2.2
-  R: bbc/R/alt2/R-4.2.1-setR_LIBS_USER_kin
-  samblaster: bbc/samblaster/samblaster-0.1.24
-  samtools: bbc/samtools/samtools-1.9
-  trim_galore: bbc/trim_galore/trim_galore-0.6.0
-  ucsc: bbc/ucsc/ucsc-2020.06.11
-  WiggleTools: bbc/WiggleTools/WiggleTools-1.2.11
+  bamtools: bbc2/bamtools/bamtools-2.5.2 
+  bedops: bbc2/bedops/bedops-2.4.41
+  bedtools: bbc2/bedtools/bedtools-2.30.0
+  bwa: bbc2/bwa/bwa-0.7.17
+  deeptools: bbc2/deeptools/deeptools-3.5.1
+  fastqc: bbc2/fastqc/fastqc-0.12.1
+  fastq_screen: bbc2/fastq_screen/fastq_screen-0.14.0
+  HMMRATAC: bbc2/HMMRATAC/HMMRATAC-1.2.10 
+  macs2: bbc2/macs2/macs2-2.2.7.1
+  multiqc: bbc2/multiqc/multiqc-1.14
+  preseq: bbc2/preseq/preseq-3.2.0 
+  qualimap: bbc2/qualimap/qualimap_v.2.2.2
+  R: bbc2/R/alt/R-4.2.1-setR_LIBS_USER
+  samblaster: bbc2/samblaster/samblaster-0.1.26
+  samtools: bbc2/samtools/samtools-1.17
+  trim_galore: bbc2/trim_galore/trim_galore-0.6.10
+  ucsc: bbc2/kent-core/kent-core-v448 
+  WiggleTools: bbc2/WiggleTools/WiggleTools-1.2.11 
