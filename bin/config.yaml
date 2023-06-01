@@ -20,7 +20,7 @@ addtnl_bigwig_norms:
 
 ecoli_chrom: "ec_Chromosome" # used for normalization if requested
 
-atacseq: true #false
+atacseq: false
 run_ATACseqQC: false # Does not matter unless atacseq==true.
 run_hmmratac: false # Does not matter unless atacseq==true. This option provided because HMMRATAC seems to have issues with low-pass/pilot sequencing data.
   #peakset_for_FRiP: 'narrow'
