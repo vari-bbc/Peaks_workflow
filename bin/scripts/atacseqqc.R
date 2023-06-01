@@ -9,6 +9,10 @@ args <- commandArgs(trailingOnly=TRUE)
 bamfile <- args[1]
 out_pref <- args[2]
 known_genes_lib <- args[3]
+
+if (!require(known_genes_lib, character.only=TRUE, quietly = TRUE))
+    BiocManager::install(known_genes_lib)
+
 library(known_genes_lib, character.only=TRUE) # load the known genes for your organism
 
 if (length(args)!=3) {
