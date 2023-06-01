@@ -20,8 +20,10 @@ addtnl_bigwig_norms:
 
 ecoli_chrom: "ec_Chromosome" # used for normalization if requested
 
-atacseq: false
+atacseq: true
 run_ATACseqQC: false # Does not matter unless atacseq==true.
+atacseqc:
+    known_genes_pkg: TxDb.Mmusculus.UCSC.mm10.knownGene
 run_hmmratac: false # Does not matter unless atacseq==true. This option provided because HMMRATAC seems to have issues with low-pass/pilot sequencing data.
   #peakset_for_FRiP: 'narrow'
 
@@ -29,7 +31,7 @@ macs2:
   gsize: "mm"
 
 DiffBind:
-  summits: 200 # 100 recommended for ATAC by DiffBind author (https://rdrr.io/bioc/DiffBind/man/DiffBind3.html).
+  summits: 100 # 100 recommended for ATAC by DiffBind author (https://rdrr.io/bioc/DiffBind/man/DiffBind3.html).
   subtract_controls: True
 
 csaw:
@@ -43,9 +45,6 @@ gtf_for_tss_heatmap: /varidata/research/projects/bbc/versioned_references/2022-0
 
 shared_snakemake_repo: "/varidata/research/projects/bbc/research/shared_snakemake/"
 
-atacseqc:
-    known_genes_pkg: TxDb.Mmusculus.UCSC.mm10.knownGene
-
 modules:
   bamtools: bbc2/bamtools/bamtools-2.5.2 
   bedops: bbc2/bedops/bedops-2.4.41
@@ -54,6 +53,7 @@ modules:
   deeptools: bbc2/deeptools/deeptools-3.5.2
   fastqc: bbc2/fastqc/fastqc-0.12.1
   fastq_screen: bbc2/fastq_screen/fastq_screen-0.14.0
+  homer: bbc2/HOMER/HOMER-4.11.1
   HMMRATAC: bbc2/HMMRATAC/HMMRATAC-1.2.10 
   macs2: bbc2/macs2/macs2-2.2.7.1
   multiqc: bbc2/multiqc/multiqc-1.14

@@ -277,13 +277,13 @@ rule atacseqc:
         knownGenesLib=config["atacseqc"]["known_genes_pkg"]
     threads: 4
     envmodules:
-        "bbc/R/R-4.1.0-setR_LIBS_USER"
+        config['modules']['R']
     resources:
         mem_gb=96,
         log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
-        Rscript --vanilla bin/atacseqqc.R {input.bam} {params.outpref} {params.knownGenesLib}
+        Rscript --vanilla bin/scripts/atacseqqc.R {input.bam} {params.outpref} {params.knownGenesLib}
         """
 
 
@@ -1177,7 +1177,7 @@ rule homer_find_motif:
         size=config['homer']['size']
     threads: 8
     envmodules:
-        "bbc/HOMER/HOMER-4.11.1"
+        config['modules']['homer']
     resources:
         mem_gb=200,
         log_prefix=lambda wildcards: "_".join(wildcards)
