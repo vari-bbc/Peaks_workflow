@@ -739,7 +739,7 @@ rule deeptools_heatmap_genes:
     threads: 16
     resources:
         mem_gb=100,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix="genes" #lambda wildcards: "_".join(wildcards)
     shell:
         """
         export TMPDIR={params.temp}
@@ -1222,9 +1222,9 @@ rule peaks_venn:
     threads: 1
     resources:
         mem_gb = 60,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix="peak_venns"
     script:
-        "bin/peaks_venn.Rmd"
+        "bin/scripts/peaks_venn.Rmd"
 
 def get_merged_beds (wildcards):
     atac_peak_types = ['macs2_ENCODE_atac_broad','macs2_ENCODE_atac_narrow','macs2_nfr_broad','macs2_nfr_narrow','macs2_narrow','macs2_broad']
@@ -1243,9 +1243,6 @@ rule deeptools_plotenrichment:
         #merged_peaks="analysis/deeptools_plotenrichment/{sample}.narrowPeak",
         plot="analysis/deeptools_plotenrichment/{sample}.pdf",
         rawcts="analysis/deeptools_plotenrichment/{sample}.rawcts"
-    log:
-        stdout="logs/deeptools_plotenrichment/{sample}.o",
-        stderr="logs/deeptools_plotenrichment/{sample}.e"
     benchmark:
         "benchmarks/deeptools_plotenrichment/{sample}.txt"
     params:
@@ -1260,7 +1257,8 @@ rule deeptools_plotenrichment:
         config['modules']['bedops'],
         config['modules']['deeptools']
     resources:
-        mem_gb=100
+        mem_gb=100,
+        log_prefix=lambda wildcards: "_".join(wildcards)
     shell:
         """
         export TMPDIR={params.temp}

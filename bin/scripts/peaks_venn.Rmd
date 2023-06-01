@@ -7,7 +7,6 @@ output:
 ---
 
 ```{r starttime}
-.libPaths("/primary/vari/software/BBC/R_libraries/R-4.0.0-pcre2-setR_LIBS_USER")
 # save start time for script
 start_tm <- Sys.time()
 start_tm
@@ -28,10 +27,8 @@ dir.create(outdir, recursive=TRUE)
 library(dplyr)
 library(stringr)
 library(rtracklayer)
-#library(ChIPseeker)
 library(ChIPpeakAnno)
 library(viridis)
-library(rtracklayer)
 ```
 
 # Read in peaks

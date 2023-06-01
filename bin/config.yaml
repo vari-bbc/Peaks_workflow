@@ -51,7 +51,7 @@ modules:
   bedops: bbc2/bedops/bedops-2.4.41
   bedtools: bbc2/bedtools/bedtools-2.30.0
   bwa: bbc2/bwa/bwa-0.7.17
-  deeptools: bbc2/deeptools/deeptools-3.5.1
+  deeptools: bbc2/deeptools/deeptools-3.5.2
   fastqc: bbc2/fastqc/fastqc-0.12.1
   fastq_screen: bbc2/fastq_screen/fastq_screen-0.14.0
   HMMRATAC: bbc2/HMMRATAC/HMMRATAC-1.2.10 
