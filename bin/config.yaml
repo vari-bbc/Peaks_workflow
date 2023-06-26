@@ -43,7 +43,6 @@ homer:
 
 gtf_for_tss_heatmap: /varidata/research/projects/bbc/versioned_references/2022-03-08_14.47.50_v9/data/mm10_gencode/annotation/mm10_gencode.basic.gtf
 
-shared_snakemake_repo: "/varidata/research/projects/bbc/research/shared_snakemake/"
 
 modules:
   bamtools: bbc2/bamtools/bamtools-2.5.2 
