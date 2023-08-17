@@ -99,6 +99,8 @@ rule rename_fastqs:
     benchmark:
         "benchmarks/rename_fastqs/{sample}_{read}.txt"
     params:
+        num_input=lambda wildcards, input: len(input),
+        input=lambda wildcards, input: ["'" + x + "'" for x in input]
     threads: 1
     resources:
         mem_gb=8,
@@ -106,11 +108,11 @@ rule rename_fastqs:
     envmodules:
     shell:
         """
-        if [ `printf '{input}' | wc -w` -gt 1 ]
+        if [ {params.num_input} -gt 1 ]
         then
-            cat {input} > {output}
+            cat {params.input} > {output}
         else
-            ln -sr {input} {output}
+            ln -sr {params.input} {output}
         fi
 
         """
