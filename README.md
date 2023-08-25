@@ -23,4 +23,4 @@ This workflow is designed to align, perform basic QC and call peaks for peak-bas
 
    vi. `enriched_factor` -- Samples with the same `enriched_factor` will be normalized together with CSAW, if alternative normalization is requested in the config file.
 
-5. From the root directory of the project, run `qsub bin/run_snakemake.sh`.
+5. From the root directory of the project, run `sbatch bin/run_snakemake.sh`.
