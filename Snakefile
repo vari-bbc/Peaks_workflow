@@ -1235,7 +1235,9 @@ rule homer_find_motif:
     input:
         "analysis/macs2/rm_blacklist/{sample}_macs2_narrow_summits.rm_blacklist.bed"
     output:
-        "analysis/homer_find_motifs/{sample}/homerMotifs.all.motifs"
+        "analysis/homer_find_motifs/{sample}/homerMotifs.all.motifs",
+        "analysis/homer_find_motifs/{sample}/homerResults.html",
+        "analysis/homer_find_motifs/{sample}/knownResults.html"
     benchmark:
         "benchmarks/homer_find_motif/{sample}.txt"
     params:
