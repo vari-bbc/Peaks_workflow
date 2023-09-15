@@ -745,9 +745,16 @@ rule prep_chromsizes_file:
 
         """
 
+def get_bws_for_merging (wildcards):
+    if config['atacseq']:
+        bigwigs = expand("analysis/macs2_ENCODE_atac/{sample}_macs2_narrow_treat_pileup.bw", sample=samples[samples['sample_group']==wildcards.group]['sample'])
+    else:
+        bigwigs = expand("analysis/deeptools_cov_rmdups/{sample}_filt_alns_rmdups.bw", sample=samples[samples['sample_group']==wildcards.group]['sample'])
+    return bigwigs
+
 rule merge_bigwigs:
     input:
-        bigwigs=lambda wildcards: expand("analysis/deeptools_cov_rmdups/{sample}_filt_alns_rmdups.bw", sample=samples[samples['sample_group']==wildcards.group]['sample']),
+        bigwigs=get_bws_for_merging,
         chromsizes="analysis/prep_chromsizes_file/chrom_sizes.tsv"
     output:
         wig=temp("analysis/merge_bigwigs/{group}.wig"),
