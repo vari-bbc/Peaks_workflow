@@ -71,7 +71,7 @@ rule all:
         expand("analysis/deeptools_plotenrichment/{sample}.pdf", sample=samples_no_controls["sample"]),
         expand("analysis/deeptools_bamcompare/{sample}_vs_control_log2ratio.bw", sample=samples_no_controls[pd.notnull(samples_no_controls['control'])]["sample"]),
         expand("analysis/filt_bams_nfr/CollectInsertSizeMetrics/{sample.sample}_filt_alns_nfr.insert_size_metrics.txt", sample=samples.itertuples()) if config['atacseq'] else [],
-        "analysis/peaks_venn/report.html",
+        #"analysis/peaks_venn/report.html",
         "analysis/deeptools_heatmap_genes/genes.pdf",
         expand("analysis/atacseqc/{sample}{suffix}", sample=samples_no_controls["sample"], suffix=["_tsse.rds","_tsse.pdf"]) if config['atacseq'] and config['run_ATACseqQC'] else [],
         "analysis/deeptools_plotCorr/corr_ht.pdf",
@@ -563,7 +563,7 @@ rule cutnrun_ecoli_scale_factors:
         """
 
 def get_bigwig_norm_factors_file(wildcards):
-    curr_enriched = samples[samples['sample']==wildcards.sample]['enriched_factor'].values[0]
+    curr_enriched = samples_no_controls[samples_no_controls['sample']==wildcards.sample]['enriched_factor'].values[0]
     if (wildcards.norm_type == "csaw_bkgd"):
         return "analysis/bigwig_norm_factors/{enriched_factor}_csaw_bkgd.tsv".format(enriched_factor=curr_enriched)
     if (wildcards.norm_type == "csaw_hiAbund"):
