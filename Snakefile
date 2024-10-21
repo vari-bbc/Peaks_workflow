@@ -79,7 +79,8 @@ rule all:
         expand("analysis/deeptools_cov_rmdups_{norm_type}/{sample}_filt_alns_rmdups.bw", norm_type=config['addtnl_bigwig_norms'], sample=samples_no_controls['sample']) if isinstance(config['addtnl_bigwig_norms'], list) else [],
         expand("analysis/homer_find_motifs/{sample}/homerMotifs.all.motifs", sample=samples_no_controls["sample"]) if config['homer']['run'] else [], #sample=samples[pd.notnull(samples['enriched_factor'])]['sample'])
         expand("analysis/bigwig_norm_factors/{enriched_factor}_{obj_nm}.rds", obj_nm=['binned','small_wins','filt_small_wins'], enriched_factor=pd.unique(samples_no_controls['enriched_factor'])),
-        expand("analysis/diffbind_count/{factor}.rds", factor=pd.unique(samples_no_controls["enriched_factor"]))
+        expand("analysis/diffbind_count/{factor}.rds", factor=pd.unique(samples_no_controls["enriched_factor"])),
+        expand("analysis/csaw_count/{enriched_factor}/filt_small_wins.rds", enriched_factor=pd.unique(samples_no_controls['enriched_factor']))
 
 def get_orig_fastq(wildcards):
     if wildcards.read == "R1":
@@ -1236,6 +1237,29 @@ rule diffbind_count:
         config['modules']['R']
     script:
         "bin/scripts/diffbind_count.R"
+
+
+rule csaw_count:
+    input:
+        bams = lambda wildcards: expand("analysis/dedup_bams/{sample}_filt_alns.dedup.bam", sample=samples_no_controls[samples_no_controls['enriched_factor'] == wildcards.enriched_factor]['sample'])
+    output:
+        binned="analysis/csaw_count/{enriched_factor}/binned.rds",
+        small_wins="analysis/csaw_count/{enriched_factor}/small_wins.rds",
+        filt_small_wins="analysis/csaw_count/{enriched_factor}/filt_small_wins.rds",
+        global_filt="analysis/csaw_count/{enriched_factor}/global_filt.rds"
+    benchmark:
+        "benchmarks/csaw_count/{enriched_factor}.txt"
+    params:
+        blacklist=config['ref']['blacklist'],
+        window_width=config['csaw']['win_width']
+    threads: 16
+    resources:
+        mem_gb=396,
+        log_prefix=lambda wildcards: "_".join(wildcards)
+    envmodules:
+        config['modules']['R']
+    script:
+        "bin/scripts/csaw_count.R"
 
 
 rule homer_find_motif:
