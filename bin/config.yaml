@@ -59,7 +59,7 @@ modules:
   picard: bbc2/picard/picard-2.27.5
   preseq: bbc2/preseq/preseq-3.2.0 
   qualimap: bbc2/qualimap/qualimap_v.2.2.2
-  R: bbc2/R/alt/R-4.3.0-setR_LIBS_USER
+  R: bbc2/R/R-4.4.0
   samblaster: bbc2/samblaster/samblaster-0.1.26
   samtools: bbc2/samtools/samtools-1.17
   trim_galore: bbc2/trim_galore/trim_galore-0.6.10
