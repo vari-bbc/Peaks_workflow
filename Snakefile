@@ -1241,7 +1241,8 @@ rule diffbind_count:
 
 rule csaw_count:
     input:
-        bams = lambda wildcards: expand("analysis/dedup_bams/{sample}_filt_alns.dedup.bam", sample=samples_no_controls[samples_no_controls['enriched_factor'] == wildcards.enriched_factor]['sample'])
+        bams = lambda wildcards: expand("analysis/dedup_bams/{sample}_filt_alns.dedup.bam", sample=samples_no_controls[samples_no_controls['enriched_factor'] == wildcards.enriched_factor]['sample']),
+        std_chroms="analysis/misc/std_chroms.txt"
     output:
         binned="analysis/csaw_count/{enriched_factor}/binned.rds",
         small_wins="analysis/csaw_count/{enriched_factor}/small_wins.rds",
@@ -1255,7 +1256,7 @@ rule csaw_count:
     threads: 16
     resources:
         mem_gb=396,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     envmodules:
         config['modules']['R']
     script:

@@ -12,6 +12,10 @@ bp_cores <- snakemake@threads-1
 # blacklist BED file
 blacklist_file <- snakemake@params[["blacklist"]]
 
+# file with the standard chromosome names
+# file should contain only 1 line, which is space delimited
+std_chroms_file <- snakemake@input[["std_chroms"]]
+
 # bam files to read in
 bam.files <- snakemake@input[["bams"]]
 
@@ -42,12 +46,18 @@ suppressPackageStartupMessages(library(magrittr))
 suppressPackageStartupMessages(library(BiocParallel))
 suppressPackageStartupMessages(library(tibble))
 
+# read in standard chromosomes file as a vector, and remove mitochondrial chromosome name
+chroms_keep_vec <- strsplit(readLines(std_chroms_file)[1], " ")[[1]] %>% 
+    grep(pattern=paste0("^", mito_chr, "$"), x=., perl=TRUE, value=TRUE, invert=TRUE)
+
+message("Keeping only these chromosomes: ", paste(chroms_keep_vec, collapse=", "))
+
 
 # import blacklist as genomicranges
 blacklist_gr <- import(blacklist_file)
 
 # Set params for reading in BAM files
-param <- readParam(minq=minq, dedup=dedup, pe="both", discard=blacklist_gr)
+param <- readParam(minq=minq, dedup=dedup, pe="both", restrict=chroms_keep_vec, discard=blacklist_gr)
 
 # Eliminate composition biases
 # TMM on binned counts
