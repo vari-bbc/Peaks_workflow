@@ -1252,7 +1252,8 @@ rule csaw_count:
         "benchmarks/csaw_count/{enriched_factor}.txt"
     params:
         blacklist=config['ref']['blacklist'],
-        window_width=config['csaw']['win_width']
+        window_width=config['csaw']['win_width'],
+        mito_chr=mito_chrom,
     threads: 16
     resources:
         mem_gb=396,

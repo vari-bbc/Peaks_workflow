@@ -16,6 +16,10 @@ blacklist_file <- snakemake@params[["blacklist"]]
 # file should contain only 1 line, which is space delimited
 std_chroms_file <- snakemake@input[["std_chroms"]]
 
+# read in mitochondrial chromosome name
+mito_chr <- snakemake@params[["mito_chr"]]
+
+
 # bam files to read in
 bam.files <- snakemake@input[["bams"]]
 
