@@ -105,7 +105,7 @@ rule rename_fastqs:
     threads: 1
     resources:
         mem_gb=8,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     envmodules:
     shell:
         """
@@ -136,7 +136,7 @@ rule fastqc:
     threads: 1
     resources:
         mem_gb = 32,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         fastqc --outdir {params.outdir} {input}
@@ -159,7 +159,7 @@ rule fastq_screen:
     threads: 8
     resources:
         mem_gb = 32,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         fastq_screen --threads {threads} --outdir analysis/fastq_screen/ {input}
@@ -183,7 +183,7 @@ rule trim_galore_PE:
     threads: 4
     resources:
         mem_gb = 64,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         trim_galore --paired {input} --output_dir analysis/trim_galore/ --cores {threads} --fastqc
@@ -207,7 +207,7 @@ rule trim_galore_SE:
     threads: 4
     resources:
         mem_gb = 64,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         trim_galore {input} --output_dir analysis/trim_galore/ --cores {threads} --fastqc
@@ -233,7 +233,7 @@ rule bwamem:
         config['modules']['samtools'],
     resources:
         mem_gb=180,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         bwa mem \
@@ -279,7 +279,7 @@ rule flagstat:
     threads: 8
     resources:
         mem_gb = 32,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         samtools flagstat -@ {threads} {input} > {output}
@@ -303,7 +303,7 @@ rule CollectAlignmentSummaryMetrics:
     threads: 4
     resources:
         mem_gb = 64,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         java -Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir={params.temp} -jar $PICARD CollectAlignmentSummaryMetrics I={input} O={output.out} R={params.reffasta}
@@ -327,7 +327,7 @@ rule CollectInsertSizeMetrics:
     threads: 4
     resources:
         mem_gb = 64,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         java -Xms8g -Xmx{resources.mem_gb}g -Djava.io.tmpdir={params.temp} -jar $PICARD CollectInsertSizeMetrics I={input} O={output.out} H={output.hist}
@@ -348,7 +348,7 @@ rule atacseqc:
         config['modules']['R']
     resources:
         mem_gb=96,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         Rscript --vanilla bin/scripts/atacseqqc.R {input.bam} {params.outpref} {params.knownGenesLib}
@@ -375,7 +375,7 @@ rule filt_bams:
     threads: 8
     resources:
         mem_gb=80,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     envmodules:
         config['modules']['samtools']
     shell:
@@ -408,7 +408,7 @@ rule dedup_bams:
     threads: 8
     resources:
         mem_gb=80,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     envmodules:
         config['modules']['samtools']
     shell:
@@ -440,7 +440,7 @@ rule filt_bams_nfr:
         config['modules']['samtools']
     resources:
         mem_gb=80,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         export TMPDIR={params.temp}
@@ -473,7 +473,7 @@ rule deeptools_cov_rmdups:
         config['modules']['deeptools']
     resources:
         mem_gb=96,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         export TMPDIR={params.temp}
@@ -502,7 +502,7 @@ rule get_std_chrom_names:
     threads: 1
     resources:
         mem_gb=20,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     envmodules:
         config['modules']['R']
     script:
@@ -527,7 +527,7 @@ rule csaw_norm_factors:
     threads: 16
     resources:
         mem_gb=396,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     envmodules:
         config['modules']['R']
     script:
@@ -548,7 +548,7 @@ rule cutnrun_ecoli_scale_factors:
     threads: 8
     resources:
         mem_gb=120,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     envmodules:
         config['modules']['samtools']
     shell:
@@ -598,7 +598,7 @@ rule alternate_norm_bigwigs:
     threads: 8
     resources:
         mem_gb=120,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     envmodules:
         config['modules']['deeptools']
     shell:
@@ -637,7 +637,7 @@ rule deeptools_multiBWsummary:
         config['modules']['deeptools']
     resources:
         mem_gb=96,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         export TMPDIR={params.temp}
@@ -660,7 +660,7 @@ rule deeptools_plotCorr:
         config['modules']['deeptools']
     resources:
         mem_gb=64,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         export TMPDIR={params.temp}
@@ -683,7 +683,7 @@ rule deeptools_plotPCA:
         config['modules']['deeptools']
     resources:
         mem_gb=64,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         export TMPDIR={params.temp}
@@ -711,7 +711,7 @@ rule deeptools_bamcompare:
         config['modules']['deeptools']
     resources:
         mem_gb=96,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         export TMPDIR={params.temp}
@@ -738,7 +738,7 @@ rule prep_chromsizes_file:
     threads: 1
     resources:
         mem_gb=8,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     envmodules:
     shell:
         """
@@ -785,7 +785,7 @@ rule merge_bigwigs:
         config['modules']['WiggleTools']
     resources:
         mem_gb=96,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         {params}
@@ -870,7 +870,7 @@ rule deeptools_fingerprint:
         config['modules']['deeptools']
     resources:
         mem_gb=160,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         export TMPDIR={params.temp}
@@ -926,7 +926,7 @@ rule macs2:
     threads: 1
     resources:
         mem_gb=100,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         macs2 \
@@ -981,7 +981,7 @@ rule bamtobed:
         config['modules']['bedtools']
     resources:
         mem_gb=80,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         # name sort BAMs
@@ -1026,7 +1026,7 @@ rule macs2_ENCODE_atac:
     threads: 1
     resources:
         mem_gb=100,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         # ENCODE uses -p 0.01 but we use -q 0.05 here to be consistent with the rest of this workflow
@@ -1102,7 +1102,7 @@ rule hmmratac:
         mito_chr=config["ref"]["mito_chr"]
     resources:
         mem_gb=120,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     threads: 8
     shell:
         """
@@ -1156,7 +1156,7 @@ rule merge_all_peaks:
     threads: 4
     resources:
         mem_gb=100,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         bedops --merge {input} 1> {output}
@@ -1186,7 +1186,7 @@ rule rm_blacklist_peaks:
     threads: 4
     resources:
         mem_gb=100,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         # below note the '||' condition for the grep statement that allows a return code of 0 even when no matches are found (as in the case of an empty bed file)
@@ -1232,7 +1232,7 @@ rule diffbind_count:
     threads: 16
     resources:
         mem_gb=392,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     envmodules:
         config['modules']['R']
     script:
@@ -1282,7 +1282,7 @@ rule homer_find_motif:
         config['modules']['homer']
     resources:
         mem_gb=200,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         findMotifsGenome.pl {input} {params.genome} {params.outdir} \
@@ -1360,7 +1360,7 @@ rule deeptools_plotenrichment:
         config['modules']['deeptools']
     resources:
         mem_gb=100,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         export TMPDIR={params.temp}
@@ -1396,7 +1396,7 @@ rule rm_supplementary_alns:
     threads: 8
     resources:
         mem_gb = 32,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         samtools view -@ {threads} -F 2304 -b -o {output} {input}
@@ -1419,7 +1419,7 @@ rule preseq_complexity:
         paired=lambda wildcards: "-P" if samples[samples['sample']==wildcards.sample]['se_or_pe'].values=="PE" else "",
     resources:
         mem_gb=100,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     threads: 8
     shell:
         """
@@ -1462,7 +1462,7 @@ rule qualimap:
     params:
     resources:
         mem_gb=100,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     threads: 8
     shell:
         """
@@ -1517,7 +1517,7 @@ rule multiqc:
     threads: 4
     resources:
         mem_gb=100,
-        log_prefix=lambda wildcards: "_".join(wildcards)
+        log_prefix=lambda wildcards: "_".join(wildcards) if len(wildcards) > 0 else "log"
     shell:
         """
         multiqc \
